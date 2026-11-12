@@ -804,16 +804,15 @@ function aOps(){
   const Y = years.has(UI.opYear)?UI.opYear:new Date().getFullYear();
   const ops = all.filter(o=>o.date && +o.date.slice(0,4)===Y).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0));
   const tot = ops.map(o=>({o,...opTotals(o.id)}));
-  const open = tot.filter(x=>!x.o.settled).reduce((s,x)=>s+x.total,0), sum = tot.reduce((s,x)=>s+x.total,0);
-  return `<div class="kpis"><div class="kpi"><span class="eyebrow">Noch nicht mit Gemeinde abgerechnet</span><b class="num">${eur(open)}</b></div>
-      <div class="kpi"><span class="eyebrow">Verpflegung ${Y} gesamt</span><b class="num">${eur(sum)}</b></div>
+  const sum = tot.reduce((s,x)=>s+x.total,0);
+  return `<div class="kpis"><div class="kpi"><span class="eyebrow">Verpflegung ${Y} gesamt</span><b class="num">${eur(sum)}</b></div>
       <div class="kpi"><span class="eyebrow">Einsätze / Übungen</span><b class="num">${ops.filter(o=>o.kind==="Einsatz").length} / ${ops.filter(o=>o.kind!=="Einsatz").length}</b></div></div>
     <div class="row between"><label class="f" style="width:140px">Jahr<select id="opYear">${[...years].sort((a,b)=>b-a).map(y=>`<option ${y===Y?"selected":""}>${y}</option>`).join("")}</select></label>
-      <div class="row" style="align-self:flex-end"><button class="btn" data-act="opcsv" data-y="${Y}">Abrechnung ${Y} exportieren</button><button class="btn primary" data-act="opnew">Einsatz anlegen</button></div></div>
+      <div class="row" style="align-self:flex-end"><button class="btn" data-act="opcsv" data-y="${Y}">Einsatzverpflegung ${Y} exportieren</button><button class="btn primary" data-act="opnew">Einsatz anlegen</button></div></div>
     ${tot.length?tot.map(({o,items,total})=>`<div class="panel section"><div class="row between"><div><span class="pill op">${esc(o.kind||"Einsatz")}</span> <span class="muted">${dDate(o.date)}${opAcct(o)?` · auf ${esc(mName(opAcct(o)))}`:""}</span><h3 style="margin-top:4px">${esc(o.title)}</h3></div>
-      <div class="row"><b class="num" style="font-size:1.3rem">${eur(total)}</b>${o.open?`<span class="pill warn">Läuft</span>`:o.settled?`<span class="pill ok">Abgerechnet</span>`:`<span class="pill neutral">Offen ggü. Gemeinde</span>`}</div></div>
+      <div class="row"><b class="num" style="font-size:1.3rem">${eur(total)}</b>${o.open?`<span class="pill warn">Läuft</span>`:`<span class="pill neutral">Beendet</span>`}</div></div>
       ${Object.keys(items).length?`<div class="chips">${Object.entries(items).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`<span class="chip">${q}× ${esc(n)}</span>`).join("")}</div>`:`<p class="muted" style="margin:0">Noch nichts gebucht.</p>`}
-      <div class="row">${o.open?`<button class="btn small" data-act="opend" data-id="${o.id}">Verpflegung beenden</button>`:`<button class="btn small" data-act="opsettle" data-id="${o.id}">${o.settled?"Abrechnung zurücknehmen":"Mit Gemeinde abgerechnet"}</button><button class="btn small ghost" data-act="opreopen" data-id="${o.id}">Wieder öffnen</button>`}
+      <div class="row">${o.open?`<button class="btn small" data-act="opend" data-id="${o.id}">Verpflegung beenden</button>`:`<button class="btn small ghost" data-act="opreopen" data-id="${o.id}">Wieder öffnen</button>`}
         <button class="btn small ghost" data-act="opedit" data-id="${o.id}">Bearbeiten</button></div></div>`).join("")
     :`<div class="empty"><b>Keine Einsatzverpflegung in ${Y}.</b><span>Einsätze und Übungen startest du an der Strichliste.</span></div>`}`;
 }
@@ -1000,15 +999,16 @@ function opForm(id){
     <div class="grid2"><label class="f">Art<select id="oKind">${OPKINDS.map(k=>`<option ${k===o.kind?"selected":""}>${k}</option>`).join("")}</select></label>
     <label class="f">Datum<input type="date" id="oDate" value="${esc(o.date)}"></label></div>
     <label class="f">Stichwort<input type="text" id="oTitle" value="${esc(o.title)}" maxlength="80" placeholder="z. B. B3 Scheunenbrand Hauptstraße, Atemschutzübung"></label>
-    <label class="f">Kosten auf Konto<select id="oAcct">${(()=>{ const ks=kasseMembers(); const cur=opAcct(o); const opts=ks.map(m=>`<option value="${m.id}" ${m.id===cur||(!cur&&!id&&m===ks[0])?"selected":""}>${esc(m.name)}</option>`).join(""); return opts + `<option value="" ${id&&!cur?"selected":""}>– kein Konto (nur sammeln für die Gemeinde)</option>`; })()}</select>
+    <label class="f">Kosten auf Konto<select id="oAcct">${(()=>{ const ks=kasseMembers(); const cur=opAcct(o); const opts=ks.map(m=>`<option value="${m.id}" ${m.id===cur||(!cur&&!id&&m===ks[0])?"selected":""}>${esc(m.name)}</option>`).join(""); return opts || `<option value="">Bitte zuerst ein Kassenkonto anlegen</option>`; })()}</select>
       <span class="hint">${kasseMembers().length?"Es werden alle Mitglieder angeboten, deren Name „Kasse“ enthält.":"Lege unter Stammdaten ein Mitglied an, dessen Name „Kasse“ enthält, z. B. „FF Kasse“."}</span></label>
     <div class="actions">${id&&!Object.values(S.bookings).some(b=>b.o===id)&&!o.carry?`<button class="btn danger" id="oDel" style="margin-right:auto">Löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="oSave">${id?"Speichern":"Starten"}</button></div>`, r=>{
     r.querySelector("#oSave").onclick = async ()=>{
       const data={kind:r.querySelector("#oKind").value, date:r.querySelector("#oDate").value||today(), title:r.querySelector("#oTitle").value.trim().slice(0,80), acct:r.querySelector("#oAcct").value||""};
       if (!data.title){ toast("Bitte ein Stichwort eingeben."); return; }
+      if (!data.acct){ toast("Bitte FF Kasse oder JF Kasse wählen. Fehlt das Konto, unter Stammdaten ein Mitglied mit „Kasse“ im Namen anlegen."); return; }
       if (id){ if (await w(db=>db.doc("ops/"+id).update(data),"Gespeichert")) closeModal(); return; }
       const ref=S.db.collection("ops").doc();
-      if (await w(()=>ref.set({...data,open:true,settled:false,ts:Date.now(),by:who()}), `${data.kind} „${data.title}“ gestartet`)){ closeModal(); if (UI.view==="kiosk"){ UI.sel="o:"+ref.id; } render(); }
+      if (await w(()=>ref.set({...data,open:true,ts:Date.now(),by:who()}), `${data.kind} „${data.title}“ gestartet`)){ closeModal(); if (UI.view==="kiosk"){ UI.sel="o:"+ref.id; } render(); }
     };
     const del=r.querySelector("#oDel"); if (del) del.onclick=async()=>{ if (await w(db=>db.doc("ops/"+id).delete(),"Gelöscht")) closeModal(); };
   });
@@ -1593,10 +1593,10 @@ async function yearReportPdf(Y){
 
   // 4 Einsatzverpflegung
   const ops=list("ops").filter(o=>(o.date||"").slice(0,4)===String(Y)).sort((a,b)=>a.date.localeCompare(b.date));
-  k.h2("4. Einsatzverpflegung (gegenüber der Gemeinde)");
-  if (ops.length){ let open=0, sum=0; const rows=ops.map(o=>{ const t=opTotals(o.id).total; sum+=t; if(!o.settled) open+=t; return [dDate(o.date), o.kind||"Einsatz", o.title, o.settled?"abgerechnet":"offen", eur(t)]; });
-    const t=["Summe","","",`davon offen ${eur(open)}`,eur(sum)]; t._bold=true; t._shade=true; rows.push(t);
-    k.table([{h:"Datum",w:24},{h:"Art",w:24},{h:"Stichwort",w:68},{h:"Status",w:34},{h:"Betrag",w:25,align:"r"}], rows); }
+  k.h2("4. Einsatzverpflegung");
+  if (ops.length){ let sum=0; const rows=ops.map(o=>{ const t=opTotals(o.id).total; sum+=t; return [dDate(o.date), o.kind||"Einsatz", o.title, opAcct(o)?mName(opAcct(o)):"–", eur(t)]; });
+    const t=["Summe","","","",eur(sum)]; t._bold=true; t._shade=true; rows.push(t);
+    k.table([{h:"Datum",w:24},{h:"Art",w:24},{h:"Stichwort",w:68},{h:"Konto",w:34},{h:"Betrag",w:25,align:"r"}], rows); }
   else k.p("Keine Einsatzverpflegung erfasst.", {muted:true});
 
   // 5 Offene Beträge
@@ -1940,9 +1940,8 @@ document.addEventListener("click", async ev => {
     case "storno": { const b=S.bookings[id]; if(!b) return; confirmBox("Buchung stornieren", `${b.qty}× ${esc(b.n)} (${eur(b.price*b.qty)}) wieder austragen?`, "Stornieren", ()=>w(db=>db.doc("bookings/"+id).delete(),"Storniert"), true); break; }
     case "opnew": opForm(); break;
     case "opedit": opForm(id); break;
-    case "opend": { const tt=opTotals(id).total; const o=S.ops[id]; confirmBox("Verpflegung beenden", `${esc(o.kind)} „${esc(o.title)}“ mit <b>${eur(tt)}</b> abschließen? Der Kassenwart sieht es danach in der Einsatzverpflegung zur Abrechnung mit der Gemeinde.`, "Beenden", async()=>{ if (await w(db=>db.doc("ops/"+id).update({open:false}),"Verpflegung beendet")){ if (UI.sel==="o:"+id){ setCart(UI.sel,{}); UI.sel=null; } render(); } }); break; }
-    case "opsettle": w(db=>db.doc("ops/"+id).update({settled:!S.ops[id].settled}), S.ops[id].settled?"Zurückgenommen":"Als abgerechnet markiert"); break;
-    case "opreopen": w(db=>db.doc("ops/"+id).update({open:true, settled:false}),"Wieder geöffnet – jetzt an der Strichliste buchbar"); break;
+    case "opend": { const tt=opTotals(id).total; const o=S.ops[id]; confirmBox("Verpflegung beenden", `${esc(o.kind)} „${esc(o.title)}“ mit <b>${eur(tt)}</b> abschließen?${opAcct(o)?` Gebucht ist alles auf ${esc(mName(opAcct(o)))}.`:""}`, "Beenden", async()=>{ if (await w(db=>db.doc("ops/"+id).update({open:false}),"Verpflegung beendet")){ if (UI.sel==="o:"+id){ setCart(UI.sel,{}); UI.sel=null; } render(); } }); break; }
+    case "opreopen": w(db=>db.doc("ops/"+id).update({open:true}),"Wieder geöffnet – jetzt an der Strichliste buchbar"); break;
     case "opcsv": { const Y=+t.dataset.y; const rows=[];
       for (const o of list("ops").filter(o=>o.date&&+o.date.slice(0,4)===Y).sort((a,b)=>a.date.localeCompare(b.date))){
         const its={}; for (const b of Object.values(S.bookings)) if (b.o===o.id){ const e=(its[b.n]=its[b.n]||{q:0,c:0}); e.q+=b.qty||1; e.c+=(b.price||0)*(b.qty||1); }
@@ -1950,7 +1949,7 @@ document.addEventListener("click", async ev => {
         const tot=opTotals(o.id).total;
         for (const [n,e] of Object.entries(its)) rows.push([dDate(o.date), o.kind, o.title, n, e.q, e.c==null?"":centsIn(e.c), ""]);
         rows.push([dDate(o.date), o.kind, o.title, "Summe", "", "", centsIn(tot)]);
-        rows.push([o.settled?"abgerechnet":"offen"]);
+        rows.push([dDate(o.date), o.kind, o.title, `Konto: ${opAcct(o)?mName(opAcct(o)):"–"}`, "", "", ""]);
       }
       saveFile(`Einsatzverpflegung-${Y}.csv`, csv(["Datum","Art","Stichwort","Artikel","Menge","Betrag EUR","Summe EUR"], rows)); break; }
     case "roundnew": roundForm(); break;
