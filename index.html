@@ -518,7 +518,7 @@ function vKiosk(){
         ${rounds.map(r=>`<button class="tile round" data-act="pick" data-key="r:${r.id}"><span class="tag">Runde${r.reason?` · ${esc(r.reason)}`:""}</span>${esc(mName(r.payer))} gibt aus<span class="sub">bisher ${eur(roundTotal(r.id))}</span>${UI.carts["r:"+r.id]?`<span class="pend">offen</span>`:""}</button>`).join("")}
         ${canWrite()?`<button class="tile addtile" data-act="opnew">+ Einsatz oder Übung verpflegen</button><button class="tile addtile" data-act="roundnew">+ Runde ausgeben</button>`:""}
       </div></div>
-    <div class="row between"><div><div class="eyebrow">Ausgabe – wer bekommt was?</div><h2>Namen antippen</h2></div>
+    <div class="row between"><div><div class="eyebrow">Ausgabe – wer bekommt was?</div><h2>Mitglieder</h2></div>
       <div style="flex:1;min-width:200px;max-width:340px"><input type="search" id="kSearch" placeholder="Name suchen …" aria-label="Name suchen" value="${esc(UI.search)}"></div></div>
     <div class="mgrid">${shown.map(m=>`<button class="tile" data-act="pick" data-key="m:${m.id}">${esc(m.name)}${UI.carts["m:"+m.id]?`<span class="pend">offen</span>`:""}</button>`).join("") || `<p class="muted">Kein Name passt zu „${esc(UI.search)}“.</p>`}</div>
     ${recent.length?`<div class="panel section"><div class="row between"><h3>Gerade gebucht</h3><span class="muted small">Stornieren bis 15 Minuten nach der Buchung</span></div>
