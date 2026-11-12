@@ -94,6 +94,7 @@ Ist eine Team-PIN gesetzt, sperrt sich die App nach 10 Minuten ohne Bedienung; e
 ## Im Alltag
 
 - **Mehrere auf einmal buchen:** Strichliste → **Mehrere buchen** → Namen antippen → **Artikel wählen** → **Für alle buchen**. Jede Person bekommt dieselben Artikel auf ihr Konto.
+- **Essen aufteilen (z. B. Pizza zum Übungsdienst):** Strichliste → **+ Essen aufteilen** → was es gab und Gesamtbetrag eingeben → Teilnehmer anklicken → **Aufteilen und buchen**. Jeder bekommt seinen Anteil (cent-genau) aufs Konto. Häkchen „Aus der Kantinenkasse bezahlt“ trägt den Betrag als Ausgabe ins Kassenbuch ein, optional mit Beleg-Foto.
 - **Barverkauf (Gäste):** Kachel **Bar bezahlt** → Artikel wählen → **Bar kassieren**. Mit Rückgeld-Rechner; zählt im Bestand und landet als Einnahme „Barverkauf“ im Kassenbuch, kein Konto wird belastet.
 - **Kontoauszug als PDF:** Verwaltung → Konten → **Auszug** (eine Person) oder **Kontoauszüge (PDF)** (alle, je Person eine Seite). Zeitraum wählen → PDF teilen, herunterladen oder drucken.
 - **Jahresabschluss:** Verwaltung → Abschluss & Einstellungen → **Jahresabschluss als PDF** – Kasse, Umsatz, Abzugslisten, Einsatzverpflegung, offene Beträge, Warenbestand und Unterschriftszeilen für die Kassenprüfung. Am besten vor dem letzten Abschluss des Jahres erstellen.

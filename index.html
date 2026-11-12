@@ -298,14 +298,14 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
 (() => {
 "use strict";
 // ================= State =================
-const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users"];
+const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users","splits"];
 const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
 COLS.forEach(c => S[c] = {});
 const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
   adminTab:"konten", statProd:"", statMeasure:"q", statMonth:null, year:new Date().getFullYear(), cashYear:new Date().getFullYear(), opYear:new Date().getFullYear(), lastAct:Date.now() };
 const CATS = ["Getränke","Heißgetränke","Essen","Snacks","Sonstiges"];
 const OPKINDS = ["Einsatz","Übung","Dienstabend","Sonstiges"];
-const CASHCATS = ["Barverkauf","Einkauf Kantine","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
+const CASHCATS = ["Barverkauf","Einkauf Kantine","Verpflegung Übungsdienst","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
 const VIEWS = ["kiosk","konto","termine","lager","statistik","verwaltung"];
 const DAY = 864e5;
 
@@ -349,7 +349,7 @@ const list = col => Object.entries(S[col]).map(([id,d]) => ({id,...d}));
 const membersActive = () => list("members").filter(m => m.active !== false).sort(byName);
 const productsActive = () => list("products").filter(p => p.active !== false).sort((a,b)=>(CATS.indexOf(a.cat)-CATS.indexOf(b.cat)) || byName(a,b));
 const mName = id => S.members[id]?.name || "Unbekannt";
-const isProd = b => b.p && !String(b.p).startsWith("event:");
+const isProd = b => b.p && !/^(event|split):/.test(String(b.p));
 const firstName = n => { n=String(n||"").trim(); if (n.includes(",")){ const v=n.split(",")[1].trim(); return v ? v.split(/\s+/)[0] : n.split(",")[0]; } return n.split(/\s+/)[0]; };
 
 function balance(mid){
@@ -534,7 +534,7 @@ function vKiosk(){
       <div class="special">
         ${ops.map(o=>{const tt=opTotals(o.id).total;return `<button class="tile op" data-act="pick" data-key="o:${o.id}"><span class="tag">${esc(o.kind||"Einsatz")} · ${dDate(o.date).slice(0,6)}</span>${esc(o.title)}<span class="sub">${eur(tt)}</span>${UI.carts["o:"+o.id]?`<span class="pend">offen</span>`:""}</button>`}).join("")}
         ${rounds.map(r=>`<button class="tile round" data-act="pick" data-key="r:${r.id}"><span class="tag">Runde${r.reason?` · ${esc(r.reason)}`:""}</span>${esc(mName(r.payer))}<span class="sub">${eur(roundTotal(r.id))}</span>${UI.carts["r:"+r.id]?`<span class="pend">offen</span>`:""}</button>`).join("")}
-        ${canWrite()?`<button class="tile cash" data-act="pick" data-key="b:"><span class="tag">Gäste</span>Bar bezahlt${UI.carts["b:"]?`<span class="pend">offen</span>`:""}</button><button class="tile addtile" data-act="opnew">+ Einsatz / Übung</button><button class="tile addtile" data-act="roundnew">+ Runde ausgeben</button>`:""}
+        ${canWrite()?`<button class="tile cash" data-act="pick" data-key="b:"><span class="tag">Gäste</span>Bar bezahlt${UI.carts["b:"]?`<span class="pend">offen</span>`:""}</button><button class="tile addtile" data-act="opnew">+ Einsatz / Übung</button><button class="tile addtile" data-act="roundnew">+ Runde ausgeben</button><button class="tile addtile" data-act="splitnew">+ Essen aufteilen</button>`:""}
       </div></div>
     <div class="row between"><div><h2>Mitglieder</h2></div>
       <div class="row" style="flex:1;min-width:200px;max-width:520px;flex-wrap:nowrap"><input type="search" id="kSearch" placeholder="Suchen" aria-label="Name suchen" value="${esc(UI.search)}">${canWrite()?`<button class="btn ${UI.multi?"primary":""}" data-act="multi" style="flex:none">${UI.multi?"Auswahl beenden":"Mehrere buchen"}</button>`:""}</div></div>
@@ -1298,8 +1298,8 @@ function runClose(){
 
 // ================= Änderungsprotokoll =================
 let LOG_MUTE = 0;
-const LOGCOLS = {users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
-const LOGCAT = {users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
+const LOGCOLS = {splits:1, users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
+const LOGCAT = {splits:"Zahlungen & Kasse", users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
 function fmtVal(k, v){
   if (v==null || v==="") return "–";
   if (["price","pfand","crateP","amount","cashStart"].includes(k)) return eur(v);
@@ -1335,6 +1335,7 @@ function describeOp(op, before){
       if (op.t==="del") return before ? `Kassenbuch-Eintrag gelöscht: ${before.text} (${eur(before.amount)})` : null;
       if (op.t==="set" && !before) return d.cat==="Barverkauf" ? null : `Kassenbuch: ${d.type==="out"?"Ausgabe":"Einnahme"} ${eur(d.amount)} – ${d.text}`;
       return diffText(`Kassenbuch-Eintrag ${before?before.text:""}`, before, d, {date:"Datum", type:"Art", amount:"Betrag", text:"Text", cat:"Kategorie"});
+    case "splits": return op.t==="set" && !before ? `Kosten aufgeteilt: ${d.text} ${eur(d.total)} auf ${(d.members||[]).length} Kameraden${d.cash?" (aus der Kantinenkasse bezahlt)":""}` : op.t==="del" && before ? `Aufteilung zurückgenommen: ${before.text}` : null;
     case "settlements": return op.t==="set" ? `Abzugsliste gebucht: ${d.label} (${eur(d.total||0)})` : null;
     case "codes": return op.t==="set" ? `Neuer QR-Code für ${mName(op.id)}` : null;
     case "events":
@@ -1700,6 +1701,60 @@ async function createUser(){
   }
 }
 
+
+// ---------- Essen aufteilen ----------
+function splitShares(total, n){ const base=Math.floor(total/n), r=total-base*n; return Array.from({length:n},(_,i)=>base+(i<r?1:0)); }
+function splitForm(){
+  const ms=membersActive(); const sel=new Set();
+  modal(`<h3>Essen aufteilen</h3>
+    <p class="muted" style="margin:0">Gesamtbetrag eingeben, Teilnehmer anklicken – jeder bekommt seinen Anteil aufs Konto.</p>
+    <div class="grid2"><label class="f">Was gab es?<input type="text" id="spText" maxlength="60" placeholder="z. B. Pizza Übungsdienst"></label>
+      <label class="f">Gesamtbetrag in €<input type="text" id="spTotal" inputmode="decimal" placeholder="46,50"></label></div>
+    <div class="row between"><b>Teilnehmer</b><span class="row"><input type="search" id="spSearch" placeholder="Suchen" style="width:160px;min-height:36px"><button class="btn small" type="button" id="spAll">Alle</button><button class="btn small ghost" type="button" id="spNone">Keine</button></span></div>
+    <div id="spList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;max-height:42vh;overflow:auto;padding:2px">
+      ${ms.map(m=>`<label class="row" style="gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer" data-name="${esc(m.name.toLowerCase())}"><input type="checkbox" data-mid="${m.id}"> ${esc(m.name)}</label>`).join("")}
+    </div>
+    <div class="panel row between" style="padding:10px 14px"><span id="spInfo" class="muted">Noch niemand ausgewählt</span><b id="spShare" class="num" style="font-size:1.3rem"></b></div>
+    <label class="row" style="font-weight:600"><input type="checkbox" id="spCash"> Aus der Kantinenkasse bezahlt – als Ausgabe ins Kassenbuch</label>
+    <label class="f" id="spFileWrap" hidden>Beleg (Foto oder PDF, optional)<input type="file" id="spFile" accept="image/*,application/pdf" capture="environment"></label>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="spOk" disabled>Aufteilen und buchen</button></div>`, r=>{
+    const total=()=>{ const v=parseEur(r.querySelector("#spTotal").value); return v>0?v:0; };
+    const upd=()=>{
+      const n=sel.size, t=total(); const ok=n>0 && t>0 && r.querySelector("#spText").value.trim();
+      r.querySelector("#spInfo").textContent = n ? `${n} ${n===1?"Kamerad":"Kameraden"}${t?` · zusammen ${eur(t)}`:""}` : "Noch niemand ausgewählt";
+      if (n && t){ const sh=splitShares(t,n); r.querySelector("#spShare").textContent = sh[0]===sh[n-1] ? `je ${eur(sh[0])}` : `je ${eur(sh[n-1])}–${eur(sh[0])}`; } else r.querySelector("#spShare").textContent="";
+      r.querySelector("#spOk").disabled=!ok;
+      r.querySelectorAll("#spList label").forEach(l=>{ const c=l.querySelector("input"); l.style.borderColor=c.checked?"var(--red)":""; l.style.background=c.checked?"var(--red-soft)":""; });
+    };
+    r.querySelectorAll("#spList input").forEach(c=>c.onchange=()=>{ c.checked?sel.add(c.dataset.mid):sel.delete(c.dataset.mid); upd(); });
+    r.querySelector("#spAll").onclick=()=>{ r.querySelectorAll("#spList label").forEach(l=>{ if (l.hidden) return; const c=l.querySelector("input"); c.checked=true; sel.add(c.dataset.mid); }); upd(); };
+    r.querySelector("#spNone").onclick=()=>{ r.querySelectorAll("#spList input").forEach(c=>c.checked=false); sel.clear(); upd(); };
+    r.querySelector("#spSearch").oninput=e=>{ const q=e.target.value.trim().toLowerCase(); r.querySelectorAll("#spList label").forEach(l=>l.hidden=!!q && !l.dataset.name.includes(q)); };
+    r.querySelector("#spTotal").oninput=upd; r.querySelector("#spText").oninput=upd;
+    r.querySelector("#spCash").onchange=e=>{ r.querySelector("#spFileWrap").hidden=!e.target.checked; };
+    r.querySelector("#spOk").onclick=async()=>{
+      const btn=r.querySelector("#spOk"); btn.disabled=true; btn.textContent="Buche …";
+      const text=r.querySelector("#spText").value.trim().slice(0,60), t=total();
+      const ids=ms.map(m=>m.id).filter(id=>sel.has(id)); const sh=splitShares(t, ids.length);
+      const cash=r.querySelector("#spCash").checked; let receipt="";
+      const f=cash && r.querySelector("#spFile").files[0];
+      if (f){ try{ receipt=await uploadReceipt(f); }catch(e){ toast("Beleg konnte nicht hochgeladen werden – Ausgabe wird ohne Beleg gebucht."); } }
+      const ts=Date.now(); const sid=randId(10); const bids=[]; let cashId=null;
+      const ok=await w(async db=>{
+        await db.doc("splits/"+sid).set({text, total:t, date:today(), members:ids, cash, ts, by:who()});
+        for (let i=0;i<ids.length;i++){ const ref=db.collection("bookings").doc(); bids.push(ref.id); await ref.set({m:ids[i], p:"split:"+sid, n:`${text} (Anteil)`, price:sh[i], qty:1, ts, by:who(), dev:S.email||"", split:sid}); }
+        if (cash){ const ref=db.collection("cash").doc(); cashId=ref.id; await ref.set({date:today(), type:"out", amount:t, text:`${text} – aufgeteilt auf ${ids.length}`, cat:"Verpflegung Übungsdienst", receipt, ts, by:who()}); }
+      });
+      if (!ok){ btn.disabled=false; btn.textContent="Aufteilen und buchen"; return; }
+      closeModal(); render();
+      toast(`${text}: ${eur(t)} auf ${ids.length} Kameraden aufgeteilt`, {label:"Rückgängig", fn: async()=>{
+        await w(async db=>{ for (const id of bids) await db.doc("bookings/"+id).delete(); if (cashId) await db.doc("cash/"+cashId).delete(); await db.doc("splits/"+sid).delete(); }, "Aufteilung zurückgenommen");
+      }});
+    };
+    upd();
+  }, true);
+}
+
 // ---------- Event wiring ----------
 document.addEventListener("click", async ev => {
   UI.lastAct=Date.now();
@@ -1736,6 +1791,7 @@ document.addEventListener("click", async ev => {
       }
       saveFile(`Einsatzverpflegung-${Y}.csv`, csv(["Datum","Art","Stichwort","Artikel","Menge","Betrag EUR","Summe EUR"], rows)); break; }
     case "roundnew": roundForm(); break;
+    case "splitnew": splitForm(); break;
     case "roundend": { const r=S.rounds[id]; confirmBox("Runde beenden", `Die Runde von <b>${esc(mName(r.payer))}</b> kostet <b>${eur(roundTotal(id))}</b>. Alles ist bereits auf ihr Konto gebucht. Runde jetzt schließen?`.replace("ihr Konto","das Konto"), "Runde beenden", async()=>{ if (await w(db=>db.doc("rounds/"+id).update({open:false}),"Runde beendet – danke fürs Ausgeben!")){ setCart("r:"+id,{}); UI.sel=null; render(); } }); break; }
     case "signup": signupForm(id); break;
     case "evtoggle": UI.openEvent = UI.openEvent===id?null:id; render(); break;
