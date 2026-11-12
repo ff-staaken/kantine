@@ -1001,7 +1001,7 @@ function opForm(id){
     <label class="f">Stichwort<input type="text" id="oTitle" value="${esc(o.title)}" maxlength="80" placeholder="z. B. B3 Scheunenbrand Hauptstraße, Atemschutzübung"></label>
     <label class="f">Kosten auf Konto<select id="oAcct">${(()=>{ const ks=kasseMembers(); const cur=opAcct(o); const opts=ks.map(m=>`<option value="${m.id}" ${m.id===cur||(!cur&&!id&&m===ks[0])?"selected":""}>${esc(m.name)}</option>`).join(""); return opts || `<option value="">Bitte zuerst ein Kassenkonto anlegen</option>`; })()}</select>
       <span class="hint">${kasseMembers().length?"Es werden alle Mitglieder angeboten, deren Name „Kasse“ enthält.":"Lege unter Stammdaten ein Mitglied an, dessen Name „Kasse“ enthält, z. B. „FF Kasse“."}</span></label>
-    <div class="actions">${id&&!Object.values(S.bookings).some(b=>b.o===id)&&!o.carry?`<button class="btn danger" id="oDel" style="margin-right:auto">Löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="oSave">${id?"Speichern":"Starten"}</button></div>`, r=>{
+    <div class="actions">${id&&!Object.values(S.bookings).some(b=>b.o===id)&&!o.carry?`<button class="btn danger" id="oDel" style="margin-right:auto">Löschen</button>`:id&&can("money")?`<button class="btn danger" id="oDelAll" style="margin-right:auto">Samt Buchungen löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="oSave">${id?"Speichern":"Starten"}</button></div>`, r=>{
     r.querySelector("#oSave").onclick = async ()=>{
       const data={kind:r.querySelector("#oKind").value, date:r.querySelector("#oDate").value||today(), title:r.querySelector("#oTitle").value.trim().slice(0,80), acct:r.querySelector("#oAcct").value||""};
       if (!data.title){ toast("Bitte ein Stichwort eingeben."); return; }
@@ -1011,6 +1011,15 @@ function opForm(id){
       if (await w(()=>ref.set({...data,open:true,ts:Date.now(),by:who()}), `${data.kind} „${data.title}“ gestartet`)){ closeModal(); if (UI.view==="kiosk"){ UI.sel="o:"+ref.id; } render(); }
     };
     const del=r.querySelector("#oDel"); if (del) del.onclick=async()=>{ if (await w(db=>db.doc("ops/"+id).delete(),"Gelöscht")) closeModal(); };
+    const delAll=r.querySelector("#oDelAll"); if (delAll) delAll.onclick=()=>{
+      const bk=list("bookings").filter(b=>b.o===id); const sum=bk.reduce((a,b)=>a+(b.price||0)*(b.qty||1),0); const acct=opAcct(o);
+      closeModal();
+      confirmBox("Einsatz samt Buchungen löschen", `${esc(o.kind||"Einsatz")} „${esc(o.title)}“ wird gelöscht – mit <b>${bk.length} ${bk.length===1?"Buchung":"Buchungen"} (${eur(sum)})</b>.${acct&&bk.length?` Der Betrag wird ${esc(mName(acct))} wieder gutgeschrieben.`:""}${o.carry?` Beträge, die schon per Abschluss zusammengefasst wurden (${eur(o.carry.total||0)}), bleiben in den Konten.`:""} Das lässt sich nicht rückgängig machen.`, "Endgültig löschen", async()=>{
+        LOG_MUTE++;
+        let ok=false; try{ ok=await w(async db=>{ for (const b of bk) await db.doc("bookings/"+b.id).delete(); await db.doc("ops/"+id).delete(); }, "Einsatz gelöscht"); } finally { LOG_MUTE--; }
+        if (ok){ addLog(`Einsatz gelöscht: ${o.kind||"Einsatz"} „${o.title}“ mit ${bk.length} Buchungen (${eur(sum)})`, "system"); if (UI.sel==="o:"+id){ setCart(UI.sel,{}); UI.sel=null; } render(); }
+      }, true);
+    };
   });
 }
 function roundForm(){
