@@ -369,6 +369,8 @@ function mhdState(p){ if (!p.mhd) return null; const d=(new Date(p.mhd+"T12:00:0
 function mhdText(p){ const s=mhdState(p); if(!s) return ""; const d=Math.round((new Date(p.mhd+"T12:00:00") - new Date(today()+"T12:00:00"))/DAY); return s==="exp"?`MHD abgelaufen (${dDate(p.mhd)})`: d===0?"MHD heute": `MHD in ${d} ${d===1?"Tag":"Tagen"}`; }
 
 // Einsatz / Runde
+const kasseMembers = () => { const all=membersActive(); const k=all.filter(m=>/kasse/i.test(m.name)); return k; };
+const opAcct = o => (o && o.acct && S.members[o.acct]) ? o.acct : null;
 function opTotals(oid){
   const o=S.ops[oid]||{}; const items={...(o.carry?.items||{})}; let total=o.carry?.total||0;
   for (const b of Object.values(S.bookings)) if (b.o===oid){ items[b.n]=(items[b.n]||0)+(b.qty||1); total += (b.price||0)*(b.qty||1); }
@@ -532,7 +534,7 @@ function vKiosk(){
     ${roNote()}
     <div class="section">
       <div class="special">
-        ${ops.map(o=>{const tt=opTotals(o.id).total;return `<button class="tile op" data-act="pick" data-key="o:${o.id}"><span class="tag">${esc(o.kind||"Einsatz")} · ${dDate(o.date).slice(0,6)}</span>${esc(o.title)}<span class="sub">${eur(tt)}</span>${UI.carts["o:"+o.id]?`<span class="pend">offen</span>`:""}</button>`}).join("")}
+        ${ops.map(o=>{const tt=opTotals(o.id).total;return `<button class="tile op" data-act="pick" data-key="o:${o.id}"><span class="tag">${esc(o.kind||"Einsatz")} · ${dDate(o.date).slice(0,6)}</span>${esc(o.title)}<span class="sub">${eur(tt)}${opAcct(o)?` · ${esc(mName(opAcct(o)))}`:""}</span>${UI.carts["o:"+o.id]?`<span class="pend">offen</span>`:""}</button>`}).join("")}
         ${rounds.map(r=>`<button class="tile round" data-act="pick" data-key="r:${r.id}"><span class="tag">Runde${r.reason?` · ${esc(r.reason)}`:""}</span>${esc(mName(r.payer))}<span class="sub">${eur(roundTotal(r.id))}</span>${UI.carts["r:"+r.id]?`<span class="pend">offen</span>`:""}</button>`).join("")}
         ${canWrite()?`<button class="tile cash" data-act="pick" data-key="b:"><span class="tag">Gäste</span>Bar bezahlt${UI.carts["b:"]?`<span class="pend">offen</span>`:""}</button><button class="tile addtile" data-act="opnew">+ Einsatz / Übung</button><button class="tile addtile" data-act="roundnew">+ Runde ausgeben</button><button class="tile addtile" data-act="splitnew">+ Essen aufteilen</button>`:""}
       </div></div>
@@ -544,7 +546,7 @@ function vKiosk(){
       : `<button class="tile" data-act="pick" data-key="m:${m.id}">${esc(m.name)}${UI.carts["m:"+m.id]?`<span class="pend">offen</span>`:""}</button>`).join("") || `<p class="muted">Kein Name passt zu „${esc(UI.search)}“.</p>`}</div>
     ${UI.multi?`<div class="selbar"><div><div class="eyebrow">Ausgewählt</div><b class="num" style="font-size:1.4rem">${UI.msel.length} ${UI.msel.length===1?"Mitglied":"Mitglieder"}</b></div>${UI.msel.length?`<button class="btn ghost" data-act="msnone">Alle abwählen</button>`:""}<button class="btn primary" data-act="mgo" ${UI.msel.length?"":"disabled"}>Artikel wählen</button></div>`:""}
     ${recent.length?`<div class="panel section"><div class="row between"><h3>Zuletzt</h3><span class="muted small">Stornieren bis 15 Minuten nach der Buchung</span></div>
-      <ul class="list">${recent.map(b=>`<li><span class="grow"><b>${esc(b.cash?"Barverkauf":b.o?(S.ops[b.o]?.title||"Einsatz"):b.r?`Runde ${mName(b.m)}`:mName(b.m))}</b> · ${b.qty}× ${esc(b.n)} <span class="muted">· ${new Date(b.ts).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${b.by?` · ${esc(String(b.by).split("@")[0])}`:""}</span></span><span class="num">${eur(b.price*b.qty)}</span>${canWrite()?`<button class="btn small" data-act="storno" data-id="${b.id}">Storno</button>`:""}</li>`).join("")}</ul></div>`:""}
+      <ul class="list">${recent.map(b=>`<li><span class="grow"><b>${esc(b.cash?"Barverkauf":b.o?`${S.ops[b.o]?.title||"Einsatz"}${b.m?` (${mName(b.m)})`:""}`:b.r?`Runde ${mName(b.m)}`:mName(b.m))}</b> · ${b.qty}× ${esc(b.n)} <span class="muted">· ${new Date(b.ts).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${b.by?` · ${esc(String(b.by).split("@")[0])}`:""}</span></span><span class="num">${eur(b.price*b.qty)}</span>${canWrite()?`<button class="btn small" data-act="storno" data-id="${b.id}">Storno</button>`:""}</li>`).join("")}</ul></div>`:""}
   </div>`;
 }
 function vKioskProducts(t, ps){
@@ -554,7 +556,7 @@ function vKioskProducts(t, ps){
   const groups = CATS.concat(["_"]).map(c => [c, ps.filter(p => (CATS.includes(p.cat)?p.cat:"_")===c)]).filter(g=>g[1].length);
   let head;
   if (t.t==="m"){ const bal=balance(t.id); head=`<div class="who"><button class="btn" data-act="unpick">← Zurück</button><span class="name">${esc(t.label)}</span><span class="bal"><span class="eyebrow">Kontostand</span><br><b class="num ${bal<0?"neg":"pos"}">${eur(bal)}</b></span></div>`; }
-  else if (t.t==="o"){ head=`<div class="who op"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--op)">${esc(t.o.kind||"Einsatz")} · ${dDate(t.o.date)} · geht auf die Wehr</span><br><span class="name">${esc(t.label)}</span></span><span class="bal"><span class="eyebrow">Bisher</span><br><b class="num">${eur(opTotals(t.id).total)}</b><br><button class="btn small" data-act="opend" data-id="${t.id}" style="margin-top:6px">Verpflegung beenden</button></span></div>`; }
+  else if (t.t==="o"){ head=`<div class="who op"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--op)">${esc(t.o.kind||"Einsatz")} · ${dDate(t.o.date)} · ${opAcct(t.o)?`geht auf ${esc(mName(opAcct(t.o)))}`:"geht auf die Wehr"}</span><br><span class="name">${esc(t.label)}</span></span><span class="bal"><span class="eyebrow">Bisher</span><br><b class="num">${eur(opTotals(t.id).total)}</b><br><button class="btn small" data-act="opend" data-id="${t.id}" style="margin-top:6px">Verpflegung beenden</button></span></div>`; }
   else if (t.t==="b"){ head=`<div class="who cash"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--ok)">Gäste zahlen sofort bar · kein Konto wird belastet</span><br><span class="name">Barverkauf</span></span></div>`; }
   else if (t.t==="x"){ const nm=t.ids.map(id=>S.members[id].name); head=`<div class="who multi"><button class="btn" data-act="unpick">← Auswahl ändern</button><span style="min-width:0;flex:1"><span class="eyebrow">Jeder bekommt dasselbe</span><br><span class="name">${t.ids.length} Mitglieder</span><div class="chips" style="margin-top:6px">${nm.slice(0,14).map(n=>`<span class="chip">${esc(n)}</span>`).join("")}${nm.length>14?`<span class="chip">+${nm.length-14} weitere</span>`:""}</div></span></div>`; }
   else { head=`<div class="who round"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--warn)">Runde${t.r.reason?` · ${esc(t.r.reason)}`:""} · alles geht auf ${esc(mName(t.r.payer))}</span><br><span class="name">${esc(t.label)}</span></span><span class="bal"><span class="eyebrow">Bisher</span><br><b class="num">${eur(roundTotal(t.id))}</b><br><button class="btn small" data-act="roundend" data-id="${t.id}" style="margin-top:6px">Runde beenden</button></span></div>`; }
@@ -569,7 +571,7 @@ function vKioskProducts(t, ps){
     }).join("")}</div></div>`).join("")}
     <div class="cartbar"><div><div class="eyebrow">${items?(t.t==="x"?`${items} Artikel je Person`:`${items} Artikel`):"Noch nichts gewählt"}</div><div class="sum num">${t.t==="x"&&items?`${eur(total)} <span class="muted" style="font-size:1rem">· zusammen ${eur(total*t.ids.length)}</span>`:eur(total)}</div></div>
       ${items?`<button class="btn alarm" data-act="alarm">Alarm – später weiter</button><button class="btn" data-act="clear">Leeren</button>`:""}
-      <button class="btn primary" data-act="book" ${items&&canWrite()?"":"disabled"}>${t.t==="m"?`Auf ${esc(firstName(t.label))} buchen`:t.t==="o"?"Auf die Wehr buchen":t.t==="b"?"Bar kassieren":t.t==="x"?`Für alle ${t.ids.length} buchen`:`Auf ${esc(firstName(mName(t.r.payer)))} buchen`}</button></div>
+      <button class="btn primary" data-act="book" ${items&&canWrite()?"":"disabled"}>${t.t==="m"?`Auf ${esc(firstName(t.label))} buchen`:t.t==="o"?(opAcct(t.o)?`Auf ${esc(mName(opAcct(t.o)))} buchen`:"Auf die Wehr buchen"):t.t==="b"?"Bar kassieren":t.t==="x"?`Für alle ${t.ids.length} buchen`:`Auf ${esc(firstName(mName(t.r.payer)))} buchen`}</button></div>
   </div>`;
 }
 
@@ -792,7 +794,7 @@ function aOps(){
       <div class="kpi"><span class="eyebrow">Einsätze / Übungen</span><b class="num">${ops.filter(o=>o.kind==="Einsatz").length} / ${ops.filter(o=>o.kind!=="Einsatz").length}</b></div></div>
     <div class="row between"><label class="f" style="width:140px">Jahr<select id="opYear">${[...years].sort((a,b)=>b-a).map(y=>`<option ${y===Y?"selected":""}>${y}</option>`).join("")}</select></label>
       <div class="row" style="align-self:flex-end"><button class="btn" data-act="opcsv" data-y="${Y}">Abrechnung ${Y} exportieren</button><button class="btn primary" data-act="opnew">Einsatz anlegen</button></div></div>
-    ${tot.length?tot.map(({o,items,total})=>`<div class="panel section"><div class="row between"><div><span class="pill op">${esc(o.kind||"Einsatz")}</span> <span class="muted">${dDate(o.date)}</span><h3 style="margin-top:4px">${esc(o.title)}</h3></div>
+    ${tot.length?tot.map(({o,items,total})=>`<div class="panel section"><div class="row between"><div><span class="pill op">${esc(o.kind||"Einsatz")}</span> <span class="muted">${dDate(o.date)}${opAcct(o)?` · auf ${esc(mName(opAcct(o)))}`:""}</span><h3 style="margin-top:4px">${esc(o.title)}</h3></div>
       <div class="row"><b class="num" style="font-size:1.3rem">${eur(total)}</b>${o.open?`<span class="pill warn">Läuft</span>`:o.settled?`<span class="pill ok">Abgerechnet</span>`:`<span class="pill neutral">Offen ggü. Gemeinde</span>`}</div></div>
       ${Object.keys(items).length?`<div class="chips">${Object.entries(items).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`<span class="chip">${q}× ${esc(n)}</span>`).join("")}</div>`:`<p class="muted" style="margin:0">Noch nichts gebucht.</p>`}
       <div class="row">${o.open?`<button class="btn small" data-act="opend" data-id="${o.id}">Verpflegung beenden</button>`:`<button class="btn small" data-act="opsettle" data-id="${o.id}">${o.settled?"Abrechnung zurücknehmen":"Mit Gemeinde abgerechnet"}</button><button class="btn small ghost" data-act="opreopen" data-id="${o.id}">Wieder öffnen</button>`}
@@ -941,7 +943,7 @@ async function bookCart(paid){
   const per = lines.reduce((s,[pid,q])=>s+S.products[pid].price*q,0);
   if (t.t==="b" && !paid){ cashModal(per); return; }
   const ts=Date.now(); const ids=[]; let cashId=null;
-  const bases = t.t==="x" ? t.ids.map(m=>({m})) : [t.t==="m"?{m:t.id} : t.t==="o"?{o:t.id} : t.t==="b"?{cash:true} : {m:t.r.payer, r:t.id}];
+  const bases = t.t==="x" ? t.ids.map(m=>({m})) : [t.t==="m"?{m:t.id} : t.t==="o"?(opAcct(t.o)?{o:t.id, m:opAcct(t.o)}:{o:t.id}) : t.t==="b"?{cash:true} : {m:t.r.payer, r:t.id}];
   const desc = lines.map(([pid,q])=>`${q}× ${S.products[pid].name}`).join(", ");
   const ok = await w(async db=>{
     for (const base of bases) for (const [pid,q] of lines){ const p=S.products[pid]; const ref=db.collection("bookings").doc(); ids.push(ref.id);
@@ -950,7 +952,7 @@ async function bookCart(paid){
   });
   if (!ok) return;
   const total = per*bases.length;
-  const target_ = t.t==="m"?t.label : t.t==="o"?t.label : t.t==="b"?"Barverkauf" : t.t==="x"?`${t.ids.length} Mitglieder` : `die Runde von ${mName(t.r.payer)}`;
+  const target_ = t.t==="m"?t.label : t.t==="o"?(opAcct(t.o)?`${t.label} (${mName(opAcct(t.o))})`:t.label) : t.t==="b"?"Barverkauf" : t.t==="x"?`${t.ids.length} Mitglieder` : `die Runde von ${mName(t.r.payer)}`;
   setCart(t.key,{});
   if (t.t==="m" || t.t==="x"){ UI.sel=null; UI.search=""; }
   if (t.t==="x"){ UI.multi=false; UI.msel=[]; }
@@ -976,13 +978,15 @@ function cashModal(total){
 function opForm(id){
   const o = id? S.ops[id] : {kind:"Einsatz", title:"", date:today()};
   modal(`<h3>${id?"Einsatz bearbeiten":"Einsatz oder Übung verpflegen"}</h3>
-    <p class="muted" style="margin:0">${id?"":"Alles, was danach gebucht wird, geht auf die Wehr und wird später mit der Gemeinde abgerechnet."}</p>
+    <p class="muted" style="margin:0">${id?"":"Alles, was danach gebucht wird, geht auf das gewählte Kassenkonto."}</p>
     <div class="grid2"><label class="f">Art<select id="oKind">${OPKINDS.map(k=>`<option ${k===o.kind?"selected":""}>${k}</option>`).join("")}</select></label>
     <label class="f">Datum<input type="date" id="oDate" value="${esc(o.date)}"></label></div>
     <label class="f">Stichwort<input type="text" id="oTitle" value="${esc(o.title)}" maxlength="80" placeholder="z. B. B3 Scheunenbrand Hauptstraße, Atemschutzübung"></label>
+    <label class="f">Kosten auf Konto<select id="oAcct">${(()=>{ const ks=kasseMembers(); const cur=opAcct(o); const opts=ks.map(m=>`<option value="${m.id}" ${m.id===cur||(!cur&&!id&&m===ks[0])?"selected":""}>${esc(m.name)}</option>`).join(""); return opts + `<option value="" ${id&&!cur?"selected":""}>– kein Konto (nur sammeln für die Gemeinde)</option>`; })()}</select>
+      <span class="hint">${kasseMembers().length?"Es werden alle Mitglieder angeboten, deren Name „Kasse“ enthält.":"Lege unter Stammdaten ein Mitglied an, dessen Name „Kasse“ enthält, z. B. „FF Kasse“."}</span></label>
     <div class="actions">${id&&!Object.values(S.bookings).some(b=>b.o===id)&&!o.carry?`<button class="btn danger" id="oDel" style="margin-right:auto">Löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="oSave">${id?"Speichern":"Starten"}</button></div>`, r=>{
     r.querySelector("#oSave").onclick = async ()=>{
-      const data={kind:r.querySelector("#oKind").value, date:r.querySelector("#oDate").value||today(), title:r.querySelector("#oTitle").value.trim().slice(0,80)};
+      const data={kind:r.querySelector("#oKind").value, date:r.querySelector("#oDate").value||today(), title:r.querySelector("#oTitle").value.trim().slice(0,80), acct:r.querySelector("#oAcct").value||""};
       if (!data.title){ toast("Bitte ein Stichwort eingeben."); return; }
       if (id){ if (await w(db=>db.doc("ops/"+id).update(data),"Gespeichert")) closeModal(); return; }
       const ref=S.db.collection("ops").doc();
@@ -1481,7 +1485,7 @@ function periodRange(kind){
 }
 function statementData(mid, range){
   const m=S.members[mid];
-  const items=[...list("bookings").filter(b=>b.m===mid).map(b=>({ts:b.ts, text:`${b.qty}× ${b.n}${b.r?` (Runde${S.rounds[b.r]?.reason?`: ${S.rounds[b.r].reason}`:""})`:""}`, amt:-(b.price*(b.qty||1))})),
+  const items=[...list("bookings").filter(b=>b.m===mid).map(b=>({ts:b.ts, text:`${b.qty}× ${b.n}${b.o?` (${S.ops[b.o]?.title||"Einsatz"})`:""}${b.r?` (Runde${S.rounds[b.r]?.reason?`: ${S.rounds[b.r].reason}`:""})`:""}`, amt:-(b.price*(b.qty||1))})),
                ...list("payments").filter(p=>p.m===mid).map(p=>({ts:p.ts, text:p.note||"Gutschrift", amt:p.amount}))].sort((a,b)=>a.ts-b.ts);
   const opening=(m.carry||0)+items.filter(x=>x.ts<range.from).reduce((s,x)=>s+x.amt,0);
   const rows=items.filter(x=>x.ts>=range.from && x.ts<=range.to);
@@ -1867,7 +1871,7 @@ document.addEventListener("click", async ev => {
       const rows=membersActive().map(m=>[m.name, centsIn(balance(m.id)), lastActivity(m.id)?new Date(lastActivity(m.id)).toLocaleString("de-DE"):""]);
       saveFile(`Kantine-Konten-${today()}.csv`, csv(["Name","Kontostand EUR","Letzte Buchung"], rows)); break; }
     case "csvtx": {
-      const rows=[...list("bookings").map(b=>[new Date(b.ts).toLocaleString("de-DE"), b.cash?"Gast":b.o?`Wehr: ${S.ops[b.o]?.title||""}`:mName(b.m), b.cash?"Barverkauf":b.o?"Einsatzverpflegung":b.r?"Runde":"Verzehr", `${b.qty}x ${b.n}`, centsIn(-(b.price*b.qty)), b.by||"", b.dev||""]),
+      const rows=[...list("bookings").map(b=>[new Date(b.ts).toLocaleString("de-DE"), b.cash?"Gast":b.o?`${b.m?mName(b.m):"Wehr"}: ${S.ops[b.o]?.title||""}`:mName(b.m), b.cash?"Barverkauf":b.o?"Einsatzverpflegung":b.r?"Runde":"Verzehr", `${b.qty}x ${b.n}`, centsIn(-(b.price*b.qty)), b.by||"", b.dev||""]),
         ...list("payments").map(p=>[new Date(p.ts).toLocaleString("de-DE"),mName(p.m),"Einzahlung",p.note||"",centsIn(p.amount),"",""])];
       saveFile(`Kantine-Buchungen-${today()}.csv`, csv(["Zeitpunkt","Name","Art","Text","Betrag EUR","Gebucht von","Gerät"], rows)); break; }
     case "close": runClose(); break;
