@@ -298,14 +298,14 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
 (() => {
 "use strict";
 // ================= State =================
-const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users","splits"];
+const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users","splits","counts"];
 const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
 COLS.forEach(c => S[c] = {});
 const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
   adminTab:"konten", statProd:"", statMeasure:"q", statMonth:null, year:new Date().getFullYear(), cashYear:new Date().getFullYear(), opYear:new Date().getFullYear(), lastAct:Date.now() };
 const CATS = ["Getränke","Heißgetränke","Essen","Snacks","Sonstiges"];
 const OPKINDS = ["Einsatz","Übung","Dienstabend","Sonstiges"];
-const CASHCATS = ["Barverkauf","Einkauf Kantine","Verpflegung Übungsdienst","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
+const CASHCATS = ["Kassendifferenz","Barverkauf","Einkauf Kantine","Verpflegung Übungsdienst","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
 const VIEWS = ["kiosk","konto","termine","lager","statistik","verwaltung"];
 const DAY = 864e5;
 
@@ -463,7 +463,7 @@ function confirmBox(title, text, btn, fn, danger){
     r => { r.querySelector("#cOk").onclick = async ()=>{ r.querySelector("#cOk").disabled=true; await fn(); closeModal(); }; });
 }
 async function copyText(text, title){
-  try{ await navigator.clipboard.writeText(text); toast("Kopiert – jetzt z. B. in WhatsApp einfügen"); return; }catch(e){}
+  try{ await navigator.clipboard.writeText(text); toast("Kopiert"); return; }catch(e){}
   modal(`<h3>${esc(title||"Text kopieren")}</h3><p class="muted" style="margin:0">Text markieren und kopieren:</p><textarea id="cpTxt" rows="10" readonly>${esc(text)}</textarea><div class="actions"><button class="btn primary" data-close>Fertig</button></div>`,
     r=>{ const t=r.querySelector("#cpTxt"); t.focus(); t.select(); });
 }
@@ -628,7 +628,7 @@ function vTermine(){
   const evs = list("events").sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||"")));
   const up = evs.filter(e=>e.date>=today()), past = evs.filter(e=>e.date<today()).reverse().slice(0,6);
   return `<div class="stack">
-    <div class="row between"><div><div class="eyebrow">Grillabend, Übungsessen, Kameradschaftsabend</div><h2>Termine</h2></div>
+    <div class="row between"><div><h2>Termine</h2></div>
       ${can("events")?`<button class="btn primary" data-act="evnew">Termin anlegen</button>`:""}</div>
     ${roNote()}
     ${up.length?up.map(e=>evCard(e)).join(""):`<div class="empty"><b>Keine anstehenden Termine.</b><span>${S.canEdit?"Leg unter „Termin anlegen“ das nächste Essen oder den nächsten Kameradschaftsabend an.":"Der Kassenwart trägt hier Essen und Veranstaltungen ein, zu denen ihr euch anmeldet."}</span></div>`}
@@ -714,8 +714,8 @@ function vStats(){
   const yRounds=list("rounds").filter(r=>new Date(r.ts||0).getFullYear()===Y).length;
   const coffee = yArr.filter(x=>x.cat==="Heißgetränke").reduce((s,x)=>s+x.q,0);
   return `<div class="stack">
-    <div><div class="eyebrow">Was läuft wie gut?</div><h2>Verbrauch pro Monat</h2></div>
-    ${!hasData?`<div class="empty"><b>Noch keine Buchungen.</b><span>Sobald an der Strichliste gebucht wird, siehst du hier, welche Artikel pro Monat gehen – hilfreich für die Bestellung vor dem Sommerfest.</span></div>`:`
+    <div><h2>Verbrauch pro Monat</h2></div>
+    ${!hasData?`<div class="empty"><b>Noch keine Buchungen.</b></div>`:`
     <div class="row">
       <label class="f" style="flex:1;min-width:200px;max-width:320px">Artikel<select id="statProd"><option value="">Alle Artikel</option>${Object.entries(allP).sort((a,b)=>a[1].localeCompare(b[1],"de")).map(([k,n])=>`<option value="${k}" ${k===pid?"selected":""}>${esc(n)}</option>`).join("")}</select></label>
       <div class="seg" role="group" aria-label="Maß" style="align-self:flex-end"><button data-act="statmeas" data-m="q" aria-pressed="${meas==="q"}">Stück</button><button data-act="statmeas" data-m="c" aria-pressed="${meas==="c"}">Umsatz</button></div>
@@ -728,7 +728,7 @@ function vStats(){
     <div class="panel section"><h3>${ymLabel(sel,true)}</h3>
       ${top.length?`<div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Stück</th><th class="r">Umsatz</th><th class="r">Ø pro Woche</th></tr></thead><tbody>${top.map(x=>`<tr${x.k===pid?` style="background:var(--red-soft)"`:""}><td><b>${esc(x.n)}</b></td><td class="r num">${nf.format(x.q)}</td><td class="r num">${eur(x.c)}</td><td class="r num">${nf1.format(x.q/4.35)}</td></tr>`).join("")}</tbody></table></div>`:`<p class="muted" style="margin:0">In diesem Monat wurde nichts gebucht.</p>`}
     </div>`}
-    <div class="row between" style="margin-top:12px"><div><div class="eyebrow">Für die Jahreshauptversammlung</div><h2>Jahresrückblick ${Y}</h2></div>
+    <div class="row between" style="margin-top:12px"><div><h2>Jahresrückblick ${Y}</h2></div>
       <label class="f" style="width:140px">Jahr<select id="yearSel">${[...years].sort((a,b)=>b-a).map(y=>`<option ${y===Y?"selected":""}>${y}</option>`).join("")}</select></label></div>
     <div class="review">
       <div class="fact"><b class="num">${nf.format(yL)} l</b><span>Getränke getrunken</span></div>
@@ -741,7 +741,7 @@ function vStats(){
       <div class="fact"><b class="num">${eur(yRev).replace(/,\d\d/,"")}</b><span>Umsatz Kantine</span></div>
     </div>
     ${yArr.length?`<div class="panel section"><h3>Beliebteste Artikel ${Y}</h3><ul class="list">${yArr.slice(0,5).map(x=>`<li><span class="grow"><b>${esc(x.n)}</b></span><span class="num">${nf.format(x.q)} Stück</span></li>`).join("")}</ul>
-      <p class="muted small" style="margin:0">Bewusst ohne Ranglisten pro Person. Liter zählen nur Artikel mit hinterlegter Füllmenge.</p></div>`:""}
+      <p class="muted small" style="margin:0">Ohne Ranglisten pro Person.</p></div>`:""}
   </div>`;
 }
 
@@ -749,10 +749,10 @@ function vStats(){
 function vAdmin(){
   if (usersOn()){
     const tabs=adminTabsFor();
-    if (!tabs.length) return `<div class="empty"><b>Keine Berechtigung.</b><span>Die Verwaltung ist für Kantinenchef und Admin. Melde dich oben rechts ab und mit einem passenden Benutzer an.</span></div>`;
+    if (!tabs.length) return `<div class="empty"><b>Keine Berechtigung.</b><span>Nur für Kantinenchef und Admin.</span></div>`;
     if (!tabs.some(t=>t[0]===UI.adminTab)) UI.adminTab=tabs[0][0];
     const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, benutzer:aUsers, abschluss:aClose}[UI.adminTab]||aKonten)();
-    return `<div class="stack"><div class="row between"><div><div class="eyebrow">${esc(ROLES[curUser().role].label)}</div><h2>Verwaltung</h2></div></div>
+    return `<div class="stack"><div class="row between"><div><h2>Verwaltung</h2></div></div>
       ${can("money")?quarterNote():""}${can("system")?tokenNote(30):""}
       <div class="seg" role="tablist">${tabs.map(([k,l])=>`<button data-act="atab" data-tab="${k}" aria-pressed="${UI.adminTab===k}">${l}</button>`).join("")}</div>
       ${body}</div>`;
@@ -764,7 +764,7 @@ function vAdmin(){
   const tabs=[["konten","Konten"],["ae","Abzugsliste"],["einsaetze","Einsatzverpflegung"],["kasse","Kassenbuch"],["stamm","Stammdaten"],["protokoll","Protokoll"],["benutzer","Benutzer"],["abschluss","Abschluss & Einstellungen"]];
   const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, benutzer:aUsers, abschluss:aClose}[UI.adminTab]||aKonten)();
   return `<div class="stack">
-    <div class="row between"><div><div class="eyebrow">Kassenwart</div><h2>Verwaltung</h2></div>${S.settings.pinHash?`<button class="btn" data-act="lock">Sperren</button>`:""}</div>
+    <div class="row between"><div><h2>Verwaltung</h2></div>${S.settings.pinHash?`<button class="btn" data-act="lock">Sperren</button>`:""}</div>
     ${!S.settings.pinHash?`<div class="note">Noch keine PIN gesetzt: Am Kantinen-Tablet kann jeder die Verwaltung öffnen. Unter „Abschluss &amp; Einstellungen“ eine PIN festlegen.</div>`:""}
     ${quarterNote()}${tokenNote(30)}
     <div class="seg" role="tablist">${tabs.map(([k,l])=>`<button data-act="atab" data-tab="${k}" aria-pressed="${UI.adminTab===k}">${l}</button>`).join("")}</div>
@@ -799,7 +799,7 @@ function aOps(){
       ${Object.keys(items).length?`<div class="chips">${Object.entries(items).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`<span class="chip">${q}× ${esc(n)}</span>`).join("")}</div>`:`<p class="muted" style="margin:0">Noch nichts gebucht.</p>`}
       <div class="row">${o.open?`<button class="btn small" data-act="opend" data-id="${o.id}">Verpflegung beenden</button>`:`<button class="btn small" data-act="opsettle" data-id="${o.id}">${o.settled?"Abrechnung zurücknehmen":"Mit Gemeinde abgerechnet"}</button><button class="btn small ghost" data-act="opreopen" data-id="${o.id}">Wieder öffnen</button>`}
         <button class="btn small ghost" data-act="opedit" data-id="${o.id}">Bearbeiten</button></div></div>`).join("")
-    :`<div class="empty"><b>Keine Einsatzverpflegung in ${Y}.</b><span>Nach einem Einsatz oder einer Übung tippt jemand an der Strichliste auf „Einsatz oder Übung verpflegen“. Alles, was dann gebucht wird, geht auf die Wehr statt auf das Mitglied und landet hier für die Abrechnung mit der Gemeinde.</span></div>`}`;
+    :`<div class="empty"><b>Keine Einsatzverpflegung in ${Y}.</b><span>Einsätze und Übungen startest du an der Strichliste.</span></div>`}`;
 }
 // ---------- Aufwandsentschädigung (Abzugsliste für die Kassiererin) ----------
 function aeDefaultLabel(){ const d=new Date(); return `${Math.floor(d.getMonth()/3)+1}. Quartal ${d.getFullYear()}`; }
@@ -808,14 +808,14 @@ function aAE(){
   const sumDebt = -debt.reduce((s,x)=>s+x.bal,0);
   const sets = list("settlements").sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.ts||0)-(a.ts||0));
   const last = sets[0];
-  return `<div class="panel stack"><p style="margin:0">Die Kassiererin zahlt die Aufwandsentschädigung quartalsweise bar aus und zieht dabei ab, was in der Kantine angeschrieben wurde. Die Kantine kennt die Höhe der Aufwandsentschädigung nicht: Sie gibt der Kassiererin nur die Abzugsliste – wer wie viel für die Kantine abgezogen bekommt. Nach der Auszahlung buchst du die Liste hier, und die Konten stehen wieder auf null.</p>
+  return `<div class="panel stack"><p style="margin:0">Liste erstellen, der Kassiererin geben und nach der Auszahlung buchen. Danach stehen die Konten wieder auf null. Die Höhe der Aufwandsentschädigung kennt die Kantine nicht.</p>
       <div class="kpis"><div class="kpi"><span class="eyebrow">Offen für die Abzugsliste</span><b class="num neg">${eur(sumDebt)}</b><span class="hint">${debt.length} ${debt.length===1?"Kamerad":"Kameraden"}</span></div>
         <div class="kpi"><span class="eyebrow">Letzte Abzugsliste</span><b class="num">${last?eur(last.total||0):"–"}</b><span class="hint">${last?`${esc(last.label)} · ${dDate(last.date)}`:"noch keine"}</span></div></div>
       <div class="row"><button class="btn primary" data-act="aeprep" ${debt.length?"":"disabled"}>Abzugsliste erstellen</button></div></div>
     <section class="section"><h3>Bisherige Abzugslisten</h3>
       ${sets.length?`<div class="tbl-wrap"><table><thead><tr><th>Quartal</th><th>Stichtag</th><th class="r">Kameraden</th><th class="r">Abgezogen</th><th></th></tr></thead><tbody>
       ${sets.map(s=>`<tr><td><b>${esc(s.label)}</b></td><td class="num">${dDate(s.date)}</td><td class="r num">${(s.rows||[]).filter(r=>r.deduct>0).length}</td><td class="r num">${eur(s.total||0)}</td><td class="r"><button class="btn small" data-act="aeshow" data-id="${s.id}">Ansehen</button></td></tr>`).join("")}
-      </tbody></table></div>`:`<div class="empty"><b>Noch keine Abzugsliste.</b><span>Vor der nächsten Auszahlung erstellst du hier die Liste für die Kassiererin.</span></div>`}</section>`;
+      </tbody></table></div>`:`<div class="empty"><b>Noch keine Abzugsliste.</b></div>`}</section>`;
 }
 function aeText(label, rows){
   const r=rows.filter(x=>x.deduct>0);
@@ -833,7 +833,7 @@ function aePrep(){
   const rows = membersActive().map(m=>({m:m.id, name:m.name, open:Math.max(0,-balance(m.id))})).filter(r=>r.open>0).map(r=>({...r,deduct:r.open}));
   let confirmStep=false;
   modal(`<h3>Abzugsliste für die Kassiererin</h3>
-    <p class="muted" style="margin:0">Enthält nur, wer etwas angeschrieben hat, und nur den Abzug für die Kantine. Konnte bei jemandem nicht alles abgezogen werden, trägst du den tatsächlichen Abzug ein – der Rest bleibt auf dem Konto offen.</p>
+    <p class="muted" style="margin:0">Nur wer etwas angeschrieben hat. Konnte nicht alles abgezogen werden, den tatsächlichen Abzug eintragen. Der Rest bleibt offen.</p>
     <div class="grid2"><label class="f">Quartal<input type="text" id="aeLabel" maxlength="60" value="${esc(aeDefaultLabel())}"></label><label class="f">Stichtag<input type="date" id="aeDate" value="${today()}"></label></div>
     <div id="aeTbl">${aeTable(rows,true)}</div>
     <div class="row"><button class="btn" id="aeCopy">Liste als Text kopieren</button><button class="btn" id="aeExport">Als Datei exportieren</button></div>
@@ -887,38 +887,40 @@ function aKasse(){
       <div class="kpi"><span class="eyebrow">Ausgaben ${Y}</span><b class="num neg">${eur(yout)}</b></div>
       <div class="kpi"><span class="eyebrow">Ausgaben ohne Beleg</span><b class="num ${missing?"neg":""}">${missing}</b><span class="hint">für die Kassenprüfung nachreichen</span></div></div>
     <div class="row between"><label class="f" style="width:140px">Jahr<select id="cashYear">${[...years].sort((a,b)=>b-a).map(y=>`<option ${y===Y?"selected":""}>${y}</option>`).join("")}</select></label>
-      <div class="row" style="align-self:flex-end"><button class="btn" data-act="cashstart">Anfangsbestand</button><button class="btn" data-act="cashcsv" data-y="${Y}">Kassenbuch ${Y} exportieren</button><button class="btn primary" data-act="cashnew">Eintrag erfassen</button></div></div>
+      <div class="row" style="align-self:flex-end"><button class="btn" data-act="kassensturz">Kassensturz</button><button class="btn" data-act="cashstart">Anfangsbestand</button><button class="btn" data-act="cashcsv" data-y="${Y}">Kassenbuch ${Y} exportieren</button><button class="btn primary" data-act="cashnew">Eintrag erfassen</button></div></div>
+    ${(()=>{ const c=list("counts").sort((a,b)=>(b.ts||0)-(a.ts||0)); if (!c.length) return ""; const l=c[0];
+      return `<div class="panel row between" style="padding:10px 14px"><span>Letzter Kassensturz: <b>${tsStr(l.ts)}</b> · gezählt <b class="num">${eur(l.ist)}</b> · Differenz <b class="num ${l.diff<0?"neg":l.diff>0?"pos":""}">${eurS(l.diff)}</b>${l.by?` · ${esc(l.by)}`:""}</span>${c.length>1?`<button class="btn small ghost" data-act="kslist">Alle (${c.length})</button>`:""}</div>`; })()}
     ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Datum</th><th>Buchungstext</th><th>Kategorie</th><th class="r">Einnahme</th><th class="r">Ausgabe</th><th class="r">Bestand</th><th>Beleg</th><th></th></tr></thead><tbody>
       ${startY!=null?`<tr><td class="muted">–</td><td class="muted" colspan="4">Übertrag</td><td class="r num">${eur(startY)}</td><td></td><td></td></tr>`:""}
       ${rows.map(r=>`<tr><td class="num">${dDate(r.date)}</td><td>${esc(r.text)}</td><td class="muted">${esc(r.cat||"")}</td><td class="r num pos">${r.type!=="out"?eur(r.amount):""}</td><td class="r num neg">${r.type==="out"?eur(r.amount):""}</td><td class="r num"><b>${eur(r.run)}</b></td>
         <td>${r.receipt?`<button class="btn small" data-act="receipt" data-id="${r.id}">Ansehen</button>`:r.type==="out"?`<span class="pill warn">Fehlt</span>`:""}</td><td class="r"><button class="btn small ghost" data-act="cashedit" data-id="${r.id}">Bearbeiten</button></td></tr>`).join("")}
-    </tbody></table></div>`:`<div class="empty"><b>Keine Kassenbuchungen in ${Y}.</b><span>Bareinzahlungen der Mitglieder und eingebuchte Einkäufe mit Betrag landen automatisch hier. Alles andere – Pfandgeld, Spenden, Kleinkram – erfasst du mit „Eintrag erfassen“, am besten gleich mit Foto vom Kassenbon.</span></div>`}
+    </tbody></table></div>`:`<div class="empty"><b>Keine Kassenbuchungen in ${Y}.</b><span>Bareinzahlungen, Einkäufe mit Betrag und Barverkäufe landen automatisch hier.</span></div>`}
     <p class="muted small" style="margin:0">${S.settings.cashStart!=null?`Anfangsbestand ${eur(S.settings.cashStart||0)}${S.settings.cashStartDate?` am ${dDate(S.settings.cashStartDate)}`:""}. `:""}Kassenbucheinträge bleiben beim Abschluss erhalten.</p>`;
 }
 function aStamm(){
   const ms = list("members").sort((a,b)=>((a.active===false)-(b.active===false))||byName(a,b));
   const ps = list("products").sort((a,b)=>((a.active===false)-(b.active===false))||(CATS.indexOf(a.cat)-CATS.indexOf(b.cat))||byName(a,b));
   return `<section class="section"><div class="row between"><h3>Mitglieder</h3><div class="row">${ms.length?`<button class="btn" data-act="qrall">QR-Zettel für alle drucken</button>`:""}<button class="btn primary" data-act="mnew">Mitglieder hinzufügen</button></div></div>
-      <p class="muted small" style="margin:0">Jeder Kamerad bekommt einen persönlichen QR-Code. Damit sieht er am Handy nur seinen eigenen Kontostand, seine Buchungen und die nächsten Termine – ohne Anmeldung.</p>
+      <p class="muted small" style="margin:0">Mit seinem QR-Code sieht jeder Kamerad am Handy sein eigenes Konto.</p>
       ${ms.length?`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Status</th><th></th></tr></thead><tbody>${ms.map(m=>`<tr><td><b>${esc(m.name)}</b></td><td>${m.active===false?`<span class="pill neutral">Ausgeblendet</span>`:`<span class="pill ok">Aktiv</span>`}</td><td class="r"><button class="btn small" data-act="qr" data-id="${m.id}">${S.codes[m.id]?"QR-Code":"QR-Code erzeugen"}</button> <button class="btn small" data-act="medit" data-id="${m.id}">Bearbeiten</button></td></tr>`).join("")}</tbody></table></div>`
-      :`<div class="empty"><b>Noch keine Mitglieder.</b><span>Füge alle Kameradinnen und Kameraden auf einmal ein, ein Name pro Zeile.</span></div>`}</section>
+      :`<div class="empty"><b>Noch keine Mitglieder.</b><span>Ein Name pro Zeile.</span></div>`}</section>
     <section class="section"><div class="row between"><h3>Sortiment &amp; Preise</h3><div class="row">${!ps.length?`<button class="btn" data-act="sample">Beispiel-Sortiment anlegen</button>`:""}<button class="btn primary" data-act="pnew">Artikel anlegen</button></div></div>
-      ${ps.length?`<div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Preis</th><th class="r">Füllmenge</th><th class="r">Pfand</th><th class="r">Bestand</th><th>Status</th><th></th></tr></thead><tbody>${ps.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="muted small">${esc(p.cat||"")}</span></td><td class="r num">${eur(p.price)}</td><td class="r num">${p.ml?`${nf.format(p.ml)} ml`:"–"}</td><td class="r num">${p.pfand?`${centsIn(p.pfand)} €${p.crate>1?` · ${p.crate}er`:""}`:"–"}</td><td class="r num">${p.track===false?"–":stockShow(p)}</td><td>${p.active===false?`<span class="pill neutral">Ausgeblendet</span>`:`<span class="pill ok">Im Verkauf</span>`}</td><td class="r"><button class="btn small" data-act="pedit" data-id="${p.id}">Bearbeiten</button></td></tr>`).join("")}</tbody></table></div>`
-      :`<div class="empty"><b>Noch kein Sortiment.</b><span>Lege Artikel einzeln an oder starte mit einem Beispiel-Sortiment (Wasser, Spezi, Bier, Kaffee, Bratwurst …) und passe Preise, Pfand und Bestand an.</span></div>`}</section>`;
+      ${ps.length?`<div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Preis</th><th class="r">Füllmenge</th><th class="r">Pfand</th><th class="r">Bestand</th><th>Status</th><th></th></tr></thead><tbody>${ps.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="muted small">${esc(p.cat||"")}</span></td><td class="r num">${eur(p.price)}</td><td class="r num">${p.ml?`${nf.format(p.ml)} ml`:"–"}</td><td class="r num">${p.pfand?`${centsIn(p.pfand)} €${p.crate>1?` · ${p.crate}er`:""}`:"–"}</td><td class="r num">${p.track===false?"–":stockShow(p)}</td><td>${p.active===false?`<span class="pill neutral">Pausiert</span>`:`<span class="pill ok">Im Verkauf</span>`}</td><td class="r" style="white-space:nowrap"><button class="btn small" data-act="saison" data-id="${p.id}">${p.active===false?"Wieder anbieten":"Saison beendet"}</button> <button class="btn small" data-act="pedit" data-id="${p.id}">Bearbeiten</button></td></tr>`).join("")}</tbody></table></div>`
+      :`<div class="empty"><b>Noch kein Sortiment.</b><span>Einzeln anlegen oder mit dem Beispiel-Sortiment starten.</span></div>`}</section>`;
 }
 function aClose(){
   const nB = Object.keys(S.bookings).length + Object.keys(S.payments).length;
   return `<section class="section"><h3>Abschluss</h3>
-      <div class="panel stack"><p style="margin:0">Der Abschluss fasst alle Buchungen und Einzahlungen bis jetzt pro Person zu einem Übertrag zusammen. Kontostände, Bestände, Leergut, Einsatzverpflegung und Statistik bleiben erhalten, die Einzelbuchungen werden gelöscht. Empfohlen einmal im Monat oder Quartal – vorher die Buchungen exportieren.</p>
+      <div class="panel stack"><p style="margin:0">Fasst alle Buchungen und Zahlungen pro Person zu einem Übertrag zusammen. Kontostände, Bestände und Statistik bleiben. Einmal im Quartal, vorher exportieren.</p>
       <p class="muted" style="margin:0">Aktuell ${nB} Einzelbuchungen seit dem letzten Abschluss.</p>
       <div class="row"><button class="btn" data-act="csvtx">Alle Buchungen exportieren</button><button class="btn danger" data-act="close" ${nB?"":"disabled"}>Abschluss durchführen</button></div></div></section>
     <section class="section"><h3>Jahresabschluss für die Kassenprüfung</h3>
-      <div class="panel stack"><p style="margin:0">Zusammenfassung als PDF für Kassenprüfung und Jahreshauptversammlung: Kasse mit Einnahmen und Ausgaben, Umsatz, Abzugslisten, Einsatzverpflegung, offene Beträge und Warenbestand – mit Unterschriftszeilen.</p>
+      <div class="panel stack"><p style="margin:0">PDF für Kassenprüfung und Jahreshauptversammlung, mit Unterschriftszeilen.</p>
       <div class="row"><label class="f" style="width:140px">Jahr<select id="yrSel">${(()=>{ const ys=new Set([new Date().getFullYear()]); list("cash").forEach(c=>c.date&&ys.add(+c.date.slice(0,4))); Object.keys(S.stats).forEach(ym=>ys.add(+ym.slice(0,4))); return [...ys].sort((a,b)=>b-a).map(y=>`<option>${y}</option>`).join(""); })()}</select></label>
       <button class="btn primary" data-act="yearpdf" style="align-self:flex-end">Jahresabschluss als PDF</button></div>
-      <p class="muted small" style="margin:0">Tipp: Den Jahresabschluss vor dem letzten Abschluss des Jahres erstellen, dann sind alle Einzelbuchungen noch enthalten.</p></div></section>
+      <p class="muted small" style="margin:0">Vor dem letzten Abschluss des Jahres erstellen.</p></div></section>
     <section class="section"><h3>Datensicherung</h3>
-      <div class="panel stack"><p style="margin:0">Lade regelmäßig – z. B. nach jedem Abschluss – eine komplette Sicherung herunter und bewahre sie auf einem USB-Stick oder im Vereins-Laufwerk auf. Die Datei enthält alle Kantinendaten und die persönlichen Codes; bitte vertraulich behandeln.</p>
+      <div class="panel stack"><p style="margin:0">Nach jedem Abschluss herunterladen und auf einem USB-Stick aufbewahren. Enthält alle Daten und QR-Codes, also vertraulich behandeln.</p>
       <div class="row"><button class="btn" data-act="backup">Sicherung herunterladen</button>${can("system")?`<label class="btn" for="restoreFile">Sicherung wiederherstellen …</label><input type="file" id="restoreFile" accept="application/json,.json" hidden>`:""}</div>
       ${S.settings.lastBackup?`<p class="muted small" style="margin:0">Letzte Sicherung: ${tsStr(S.settings.lastBackup)}</p>`:`<p class="muted small" style="margin:0">Noch keine Sicherung heruntergeladen.</p>`}</div></section>
     ${can("system")?`<section class="section"><h3>Einstellungen</h3>
@@ -930,7 +932,7 @@ function aClose(){
       <div class="panel stack"><div class="row between"><span>Dieses Gerät: <b>${esc(S.email||"")}</b></span><span class="muted small">${esc(syncLabel())}</span></div>
       <form class="row" id="tokForm"><label class="f" style="width:200px">Zugangsschlüssel gültig bis<input type="date" id="tokExp" value="${esc(tokenExpiry())}"></label><button class="btn" type="submit" style="align-self:flex-end">Speichern</button><span class="hint" style="align-self:flex-end">Steht bei GitHub beim Schlüssel. 30 Tage vorher erscheint ein Hinweis.</span></form>
       <div class="row"><button class="btn" data-act="syncnow">Jetzt abgleichen</button><button class="btn" data-act="pwchange">Kantinen-Passwort ändern</button><button class="btn danger" data-act="logout">Gerät abmelden</button></div>
-      <p class="muted small" style="margin:0">Weiteres Gerät, z. B. der PC zu Hause: Adresse der Kantine öffnen, Zugangsschlüssel und Kantinen-Passwort eingeben. Ein verlorenes Gerät sperrst du, indem du in GitHub einen neuen Zugangsschlüssel erzeugst und den alten löschst (siehe Anleitung).</p></div></section>`:""}`;
+      <p class="muted small" style="margin:0">Neues Gerät: Adresse öffnen, Zugangsschlüssel und Kantinen-Passwort eingeben. Gerät verloren: neuen Zugangsschlüssel erzeugen (siehe Anleitung).</p></div></section>`:""}`;
 }
 
 // ================= Actions =================
@@ -957,7 +959,7 @@ async function bookCart(paid){
   if (t.t==="m" || t.t==="x"){ UI.sel=null; UI.search=""; }
   if (t.t==="x"){ UI.multi=false; UI.msel=[]; }
   render(); window.scrollTo({top:0});
-  toast(`${desc} ${t.t==="b"?"bar kassiert":`für ${target_} gebucht`} · ${eur(total)}`, {label:"Rückgängig", fn: async()=>{
+  toast(`${t.t==="b"?"Bar":target_}: ${desc} – ${eur(total)}`, {label:"Rückgängig", fn: async()=>{
     await w(async db=>{ for (const id of ids) await db.doc("bookings/"+id).delete(); if (cashId) await db.doc("cash/"+cashId).delete(); }, "Buchung zurückgenommen");
   }});
 }
@@ -1055,7 +1057,7 @@ function productForm(id){
     <label class="f">Flaschen je Kasten<input type="number" id="pCrate" min="0" step="1" value="${p.crate||""}" placeholder="20"></label>
     <label class="f">Kastenpfand in €<input type="text" id="pCrateP" inputmode="decimal" value="${p.crateP?centsIn(p.crateP):""}" placeholder="1,50"></label></div>
     ${id?`<label class="row" style="font-weight:600"><input type="checkbox" id="pActive" ${p.active!==false?"checked":""}> Im Verkauf</label>
-    <p class="muted small" style="margin:0">Preisänderungen gelten für neue Buchungen. Bestand korrigierst du im Lager über Inventur.</p>`:""}
+    <p class="muted small" style="margin:0">Ein neuer Preis gilt für neue Buchungen.</p>`:""}
     <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="pSave">Speichern</button></div>`, r=>{
     r.querySelector("#pSave").onclick = async ()=>{
       const v=s=>r.querySelector(s).value;
@@ -1231,7 +1233,7 @@ function stockForm(mode){
 function leergutForm(){
   const ps = productsActive().filter(p=>p.pfand>0);
   const val = (p,n) => n*p.pfand + (p.crate>1?Math.floor(n/p.crate)*(p.crateP||0):0);
-  modal(`<h3>Leergut zurückgegeben</h3><p class="muted" style="margin:0">Vorausgefüllt mit dem berechneten Leergut. Anpassen, was tatsächlich zurückging.</p>
+  modal(`<h3>Leergut zurückgegeben</h3><p class="muted" style="margin:0">Vorausgefüllt mit dem berechneten Leergut.</p>
     <div>${ps.map(p=>`<div class="mrow" style="grid-template-columns:1fr auto"><span><b>${esc(p.name)}</b><br><span class="muted small">da: ${units(empties(p.id),p.crate)}</span></span><input type="number" min="0" step="1" data-pid="${p.id}" value="${empties(p.id)}" aria-label="${esc(p.name)} Flaschen zurück"></div>`).join("")}</div>
     <div class="row between"><b>Pfand gesamt</b><b class="num" id="lgSum"></b></div>
     ${can("money")?`<label class="row" style="font-weight:600"><input type="checkbox" id="lgCash" checked> Pfandgeld als Einnahme ins Kassenbuch</label>`:""}
@@ -1302,8 +1304,8 @@ function runClose(){
 
 // ================= Änderungsprotokoll =================
 let LOG_MUTE = 0;
-const LOGCOLS = {splits:1, users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
-const LOGCAT = {splits:"Zahlungen & Kasse", users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
+const LOGCOLS = {counts:1, splits:1, users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
+const LOGCAT = {counts:"Zahlungen & Kasse", splits:"Zahlungen & Kasse", users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
 function fmtVal(k, v){
   if (v==null || v==="") return "–";
   if (["price","pfand","crateP","amount","cashStart"].includes(k)) return eur(v);
@@ -1339,6 +1341,7 @@ function describeOp(op, before){
       if (op.t==="del") return before ? `Kassenbuch-Eintrag gelöscht: ${before.text} (${eur(before.amount)})` : null;
       if (op.t==="set" && !before) return d.cat==="Barverkauf" ? null : `Kassenbuch: ${d.type==="out"?"Ausgabe":"Einnahme"} ${eur(d.amount)} – ${d.text}`;
       return diffText(`Kassenbuch-Eintrag ${before?before.text:""}`, before, d, {date:"Datum", type:"Art", amount:"Betrag", text:"Text", cat:"Kategorie"});
+    case "counts": return op.t==="set" && !before ? `Kassensturz: gezählt ${eur(d.ist)}, laut Kassenbuch ${eur(d.soll)}, Differenz ${eurS(d.diff)}${d.booked?" (als Korrektur gebucht)":""}` : null;
     case "splits": return op.t==="set" && !before ? `Kosten aufgeteilt: ${d.text} ${eur(d.total)} auf ${(d.members||[]).length} Kameraden${d.cash?" (aus der Kantinenkasse bezahlt)":""}` : op.t==="del" && before ? `Aufteilung zurückgenommen: ${before.text}` : null;
     case "settlements": return op.t==="set" ? `Abzugsliste gebucht: ${d.label} (${eur(d.total||0)})` : null;
     case "codes": return op.t==="set" ? `Neuer QR-Code für ${mName(op.id)}` : null;
@@ -1390,14 +1393,14 @@ function aLog(){
       ${rs.length?`<div class="tbl-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Gebucht von</th><th>Für</th><th>Artikel</th><th class="r">Betrag</th></tr></thead><tbody>
         ${rs.slice(0,400).map(b=>`<tr><td class="num" style="white-space:nowrap">${tsStr(b.ts)}</td><td><b>${esc(b.by||"–")}</b>${b.dev&&b.dev!==b.by?`<br><span class="muted small">${esc(b.dev)}</span>`:""}</td><td>${esc(b.cash?"Barverkauf":b.o?(S.ops[b.o]?.title||"Einsatz"):b.r?`Runde ${mName(b.m)}`:mName(b.m))}</td><td>${b.qty}× ${esc(b.n)}</td><td class="r num">${eur((b.price||0)*(b.qty||1))}</td></tr>`).join("")}
       </tbody></table></div>`:`<div class="empty"><b>Keine Buchungen seit dem letzten Abschluss.</b></div>`}
-      <p class="muted small" style="margin:0">Zeigt die Einzelbuchungen seit dem letzten Abschluss. Stornos stehen unter „Stornos“.</p>`;
+      <p class="muted small" style="margin:0">Einzelbuchungen seit dem letzten Abschluss.</p>`;
   }
   return `<div class="row between">${seg}
       <button class="btn" data-act="logcsv">Protokoll exportieren</button></div>
     ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Wer · Gerät</th><th>Änderung</th></tr></thead><tbody>
       ${rows.slice(0,400).map(x=>`<tr><td class="num" style="white-space:nowrap">${tsStr(x.ts)}</td><td class="muted">${esc(x.dev||"")}</td><td>${esc(x.text).replace(/ -&gt; /g," → ")}</td></tr>`).join("")}
     </tbody></table></div>${rows.length>400?`<p class="muted small" style="margin:0">Angezeigt: die neuesten 400 von ${rows.length}. Alle im Export.</p>`:""}`
-    :`<div class="empty"><b>Noch keine Einträge.</b><span>Hier erscheint, wer wann an welchem Gerät Preise, Mitglieder, Zahlungen, Kassenbuch oder Einstellungen geändert hat und welche Buchungen storniert wurden.</span></div>`}
+    :`<div class="empty"><b>Noch keine Einträge.</b></div>`}
     <p class="muted small" style="margin:0">Das Protokoll speichert die letzten etwa 1.500 Änderungen.</p>`;
 }
 
@@ -1553,6 +1556,8 @@ async function yearReportPdf(Y){
   const s2=[`Endbestand ${dDate(stich)}`, `Einnahmen ${eur(tin)} · Ausgaben ${eur(tout)}`, eur(start+tin-tout)]; s2._bold=true; s2._shade=true; cr.push(s2);
   k.table([{h:"Position",w:70},{h:"",w:70},{h:"Betrag",w:35,align:"r"}], cr);
   const miss=yc.filter(c=>c.type==="out" && !c.receipt).length;
+  const ks=list("counts").filter(c=>(c.date||"").slice(0,4)===String(Y)).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  if (ks.length){ const l=ks[ks.length-1]; k.p(`Kassenstürze ${Y}: ${ks.length}, zuletzt am ${dDate(l.date)} – gezählt ${eur(l.ist)}, Differenz ${l.diff===0?"keine":eurS(l.diff)}. Summe aller Differenzen: ${eurS(ks.reduce((a,c)=>a+c.diff,0))}.`); }
   k.p(miss ? `Ausgaben ohne hinterlegten Beleg: ${miss}. Einzelaufstellung im Kassenbuch-Export.` : "Zu allen Ausgaben ist ein Beleg hinterlegt.", {muted:true});
 
   // 2 Umsatz
@@ -1634,9 +1639,9 @@ function loginView(){
     return `<form class="login panel" id="userLogin"><div><div class="eyebrow">${esc(ROLES[u.role]?.label||"")}</div><h2>${esc(u.name)}</h2></div>
       <label class="f">Passwort<input type="password" id="ulPw" autocomplete="current-password" required></label>
       <div class="row"><button class="btn" type="button" data-act="ulback">← Andere Person</button><button class="btn primary" type="submit" style="margin-left:auto">Anmelden</button></div></form>`; }
-  return `<div class="stack"><div><div class="eyebrow">Wer bedient?</div><h2>Anmelden</h2></div>
+  return `<div class="stack"><div><h2>Wer bedient?</h2></div>
     <div class="mgrid">${us.map(u=>`<button class="tile" data-act="ulpick" data-id="${u.id}">${esc(u.name)}<span class="sub">${esc(ROLES[u.role]?.label||"")}</span></button>`).join("")}</div>
-    <p class="muted small" style="margin:0">Jede Buchung wird mit deinem Namen gespeichert. Nach 10 Minuten ohne Bedienung meldet die App ab.</p></div>`;
+    <p class="muted small" style="margin:0"><i>Gott zur Ehr, dem Nächsten zur Wehr!</i><br>Abmeldung nach 10 Minuten ohne Bedienung.</p></div>`;
 }
 function whoBox(){
   const el=$("#whoBox"); if (!el) return;
@@ -1648,7 +1653,7 @@ function userMenu(){
   const u=curUser(); if (!u) return;
   modal(`<h3>${esc(u.name)}</h3><p class="muted" style="margin:0">Rolle: ${esc(ROLES[u.role]?.label||"")} – ${esc(ROLES[u.role]?.desc||"")}</p>
     <div class="actions" style="justify-content:flex-start"><button class="btn" id="umPw">Mein Passwort ändern</button><button class="btn primary" id="umOut">Abmelden</button></div>`, r=>{
-    r.querySelector("#umOut").onclick=()=>{ closeModal(); logoutUser(); };
+    r.querySelector("#umOut").onclick=()=>{ closeModal(); logoutUser("Gut Schlauch!"); };
     r.querySelector("#umPw").onclick=()=>userPwModal(u.id, true);
   });
 }
@@ -1672,7 +1677,7 @@ function userPwModal(id, self){
 function aUsers(){
   const us=Object.entries(S.users||{}).map(([id,u])=>({id,...u})).sort((a,b)=>((a.active===false)-(b.active===false)) || (ROLES[b.role]?.rank||0)-(ROLES[a.role]?.rank||0) || a.name.localeCompare(b.name,"de"));
   const me=UI.user;
-  return `<div class="panel stack"><p style="margin:0">Jede Person meldet sich mit ihrem Namen und ihrem eigenen Passwort an. So steht bei jeder Buchung, jedem Storno und jeder Änderung, wer es war.</p>
+  return `<div class="panel stack"><p style="margin:0">Jeder meldet sich mit Namen und eigenem Passwort an. So ist jede Buchung nachvollziehbar.</p>
       <ul class="list">${Object.entries(ROLES).map(([k,r])=>`<li><span class="pill ${k==="admin"?"bad":k==="chef"?"warn":k==="hbm"?"op":"ok"}">${r.label}</span><span class="grow">${esc(r.desc)}</span></li>`).join("")}</ul>
       ${!usersOn()?`<div class="note">Noch keine Benutzer angelegt. Lege zuerst dich selbst als <b>Admin</b> an. Danach meldet sich jeder mit Namen und Passwort an; Team-PIN und Admin-PIN werden dann nicht mehr verwendet.</div>`:""}</div>
     <form class="panel grid2" id="userForm"><label class="f">Name<input type="text" id="uName" maxlength="40" required placeholder="z. B. Becker, Anna"></label>
@@ -1686,7 +1691,7 @@ function aUsers(){
         <td class="muted">${u.lastLogin?tsStr(u.lastLogin):"–"}</td>
         <td class="r" style="white-space:nowrap">${self?"":`<button class="btn small" data-act="upw" data-id="${u.id}">Passwort neu</button> <button class="btn small ${u.active===false?"":"danger"}" data-act="uact" data-id="${u.id}">${u.active===false?"Aktivieren":"Deaktivieren"}</button>`}</td></tr>`; }).join("")}
     </tbody></table></div>`:""}
-    <p class="muted small" style="margin:0">Es bleibt immer mindestens ein aktiver Admin. Deaktivierte Personen können sich nicht mehr anmelden, ihre bisherigen Buchungen bleiben mit Namen erhalten.</p>`;
+    <p class="muted small" style="margin:0">Ein Admin bleibt immer aktiv. Buchungen deaktivierter Personen bleiben erhalten.</p>`;
 }
 async function createUser(){
   const name=$("#uName").value.trim().slice(0,40), role=$("#uRole").value, pw=$("#uPw").value;
@@ -1699,7 +1704,7 @@ async function createUser(){
   if (await w(db=>db.doc("users/"+id).set({name, role, pw:"", active:true, ts:Date.now()}))){
     await w(async db=>db.doc("users/"+id).update({pw:await userHash(id,pw)}));
     $("#uName").value=""; $("#uPw").value="";
-    if (first){ UI.user=id; ss.set("kantine.user", id); UI.lastAct=Date.now(); toast("Benutzer angelegt. Ab jetzt meldet sich jeder mit Namen und Passwort an."); }
+    if (first){ UI.user=id; ss.set("kantine.user", id); UI.lastAct=Date.now(); toast("Angelegt. Ab jetzt mit Namen und Passwort anmelden."); }
     else toast(`${name} angelegt (${ROLES[role].label})`);
     render();
   }
@@ -1711,7 +1716,7 @@ function splitShares(total, n){ const base=Math.floor(total/n), r=total-base*n; 
 function splitForm(){
   const ms=membersActive(); const sel=new Set();
   modal(`<h3>Essen aufteilen</h3>
-    <p class="muted" style="margin:0">Gesamtbetrag eingeben, Teilnehmer anklicken – jeder bekommt seinen Anteil aufs Konto.</p>
+    <p class="muted" style="margin:0">Teilnehmer anklicken, jeder bekommt seinen Anteil aufs Konto.</p>
     <div class="grid2"><label class="f">Was gab es?<input type="text" id="spText" maxlength="60" placeholder="z. B. Pizza Übungsdienst"></label>
       <label class="f">Gesamtbetrag in €<input type="text" id="spTotal" inputmode="decimal" placeholder="46,50"></label></div>
     <div class="row between"><b>Teilnehmer</b><span class="row"><input type="search" id="spSearch" placeholder="Suchen" style="width:160px;min-height:36px"><button class="btn small" type="button" id="spAll">Alle</button><button class="btn small ghost" type="button" id="spNone">Keine</button></span></div>
@@ -1751,12 +1756,55 @@ function splitForm(){
       });
       if (!ok){ btn.disabled=false; btn.textContent="Aufteilen und buchen"; return; }
       closeModal(); render();
-      toast(`${text}: ${eur(t)} auf ${ids.length} Kameraden aufgeteilt`, {label:"Rückgängig", fn: async()=>{
+      toast(`${text}: ${eur(t)} auf ${ids.length} aufgeteilt`, {label:"Rückgängig", fn: async()=>{
         await w(async db=>{ for (const id of bids) await db.doc("bookings/"+id).delete(); if (cashId) await db.doc("cash/"+cashId).delete(); await db.doc("splits/"+sid).delete(); }, "Aufteilung zurückgenommen");
       }});
     };
     upd();
   }, true);
+}
+
+
+// ---------- Kassensturz ----------
+const DENOMS=[[20000,"200 €"],[10000,"100 €"],[5000,"50 €"],[2000,"20 €"],[1000,"10 €"],[500,"5 €"],[200,"2 €"],[100,"1 €"],[50,"50 ct"],[20,"20 ct"],[10,"10 ct"],[5,"5 ct"],[2,"2 ct"],[1,"1 ct"]];
+function kassensturzForm(){
+  const soll=cashBalance();
+  modal(`<h3>Kassensturz</h3>
+    <p class="muted" style="margin:0">Bargeld zählen. Laut Kassenbuch sollten <b class="num">${eur(soll)}</b> in der Kasse sein.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
+      ${DENOMS.map(([c,l])=>`<label class="row" style="gap:8px;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:6px 10px"><span style="font-weight:600;min-width:46px">${l}</span><input type="number" min="0" step="1" data-den="${c}" placeholder="0" style="width:80px;min-height:36px" aria-label="Anzahl ${l}"></label>`).join("")}
+    </div>
+    <label class="f">… oder Gesamtbetrag direkt eingeben<input type="text" id="ksTotal" inputmode="decimal" placeholder="z. B. 237,40"></label>
+    <div class="panel" style="padding:10px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 16px">
+      <span>Gezählt</span><b class="num" id="ksIst">0,00 €</b>
+      <span>Laut Kassenbuch</span><b class="num">${eur(soll)}</b>
+      <span>Differenz</span><b class="num" id="ksDiff" style="font-size:1.3rem">–</b>
+    </div>
+    <label class="row" style="font-weight:600"><input type="checkbox" id="ksBook" checked> Differenz als Korrektur ins Kassenbuch buchen</label>
+    <label class="f">Bemerkung (optional)<input type="text" id="ksNote" maxlength="80" placeholder="z. B. gezählt mit Chef, Carla"></label>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="ksOk">Kassensturz speichern</button></div>`, r=>{
+    const ist=()=>{ const t=r.querySelector("#ksTotal").value.trim(); if (t){ const v=parseEur(t); return isNaN(v)?null:v; } let sum=0; r.querySelectorAll("input[data-den]").forEach(i=>{ sum+=(parseInt(i.value)||0)*(+i.dataset.den); }); return sum; };
+    const upd=()=>{ const v=ist(); r.querySelector("#ksIst").textContent = v==null?"–":eur(v); const d=v==null?null:v-soll; const el=r.querySelector("#ksDiff"); el.textContent = d==null?"–":(d===0?"stimmt":eurS(d)); el.className="num"+(d<0?" neg":d>0?" pos":""); r.querySelector("#ksBook").disabled = !d; };
+    r.querySelectorAll("input[data-den]").forEach(i=>i.oninput=()=>{ r.querySelector("#ksTotal").value=""; upd(); });
+    r.querySelector("#ksTotal").oninput=upd; upd();
+    r.querySelector("#ksOk").onclick=async()=>{
+      const v=ist(); if (v==null){ toast("Bitte einen gültigen Betrag eingeben."); return; }
+      const diff=v-soll, book=diff!==0 && r.querySelector("#ksBook").checked, note=r.querySelector("#ksNote").value.trim();
+      const detail={}; r.querySelectorAll("input[data-den]").forEach(i=>{ const n=parseInt(i.value)||0; if (n) detail[i.dataset.den]=n; });
+      const ts=Date.now();
+      const ok=await w(async db=>{
+        await db.collection("counts").doc().set({date:today(), ts, ist:v, soll, diff, booked:book, detail, note, by:who()});
+        if (book){ LOG_MUTE++; try{ await db.collection("cash").doc().set({date:today(), type:diff>0?"in":"out", amount:Math.abs(diff), text:`Kassensturz: Differenz${note?` (${note})`:""}`, cat:"Kassendifferenz", receipt:"", ts, by:who()}); } finally { LOG_MUTE--; } }
+      }, diff===0?"Kassensturz gespeichert – stimmt":`Kassensturz gespeichert, Differenz ${eurS(diff)}`);
+      if (ok){ closeModal(); render(); }
+    };
+  }, true);
+}
+function kassensturzList(){
+  const c=list("counts").sort((a,b)=>(b.ts||0)-(a.ts||0));
+  modal(`<h3>Kassenstürze</h3><div class="tbl-wrap"><table style="min-width:480px"><thead><tr><th>Zeitpunkt</th><th class="r">Gezählt</th><th class="r">Soll</th><th class="r">Differenz</th><th>Wer</th></tr></thead><tbody>
+    ${c.map(x=>`<tr><td class="num">${tsStr(x.ts)}${x.note?`<br><span class="muted small">${esc(x.note)}</span>`:""}</td><td class="r num">${eur(x.ist)}</td><td class="r num">${eur(x.soll)}</td><td class="r num ${x.diff<0?"neg":x.diff>0?"pos":""}">${x.diff===0?"stimmt":eurS(x.diff)}${x.booked?"<br><span class=\"muted small\">gebucht</span>":""}</td><td class="muted">${esc(x.by||"")}</td></tr>`).join("")}
+  </tbody></table></div><div class="actions"><button class="btn primary" data-close>Schließen</button></div>`, null, true);
 }
 
 // ---------- Event wiring ----------
@@ -1772,7 +1820,7 @@ document.addEventListener("click", async ev => {
     case "msnone": UI.msel=[]; render(); break;
     case "mgo": { const ids=membersActive().map(m=>m.id).filter(x=>UI.msel.includes(x)); if (!ids.length) return; UI.sel="x:"+ids.join(","); render(); window.scrollTo({top:0}); break; }
     case "pick": UI.sel=t.dataset.key; render(); window.scrollTo({top:0}); break;
-    case "unpick": case "alarm": if (UI.sel && UI.sel.startsWith("x:") && a==="unpick"){ UI.msel=UI.sel.slice(2).split(","); UI.multi=true; } UI.sel=null; render(); window.scrollTo({top:0}); if (a==="alarm") toast("Gemerkt. Die Buchung wartet oben unter „Angefangene Buchungen“."); break;
+    case "unpick": case "alarm": if (UI.sel && UI.sel.startsWith("x:") && a==="unpick"){ UI.msel=UI.sel.slice(2).split(","); UI.multi=true; } UI.sel=null; render(); window.scrollTo({top:0}); if (a==="alarm") toast("Gemerkt – steht oben unter „Angefangene Buchungen“."); break;
     case "dropcart": setCart(t.dataset.key,{}); render(); break;
     case "add": { if (ev.target.closest(".minus")) return; const c={...cartOf(UI.sel)}; c[id]=(c[id]||0)+1; setCart(UI.sel,c); render(); break; }
     case "sub": { ev.stopPropagation(); const c={...cartOf(UI.sel)}; c[id]=Math.max(0,(c[id]||0)-1); if(!c[id]) delete c[id]; setCart(UI.sel,c); render(); break; }
@@ -1858,6 +1906,9 @@ document.addEventListener("click", async ev => {
     case "cashnew": cashForm(); break;
     case "cashedit": cashForm(id); break;
     case "cashstart": cashStartForm(); break;
+    case "kassensturz": kassensturzForm(); break;
+    case "kslist": kassensturzList(); break;
+    case "saison": { const pr=S.products[id]; if (!pr) break; const on=pr.active===false; w(db=>db.doc("products/"+id).update({active:on}), on?`${pr.name} wieder im Verkauf`:`${pr.name}: Saison beendet`); break; }
     case "receipt": showReceipt(id); break;
     case "cashcsv": { const Y=+t.dataset.y; let run=S.settings.cashStart||0; const rows=[];
       for (const c of cashSorted()){ run+=c.type==="out"?-c.amount:c.amount; if (+String(c.date).slice(0,4)===Y) rows.push([dDate(c.date), c.text, c.cat||"", c.type!=="out"?centsIn(c.amount):"", c.type==="out"?centsIn(c.amount):"", centsIn(run), c.receipt?"ja":"nein"]); }
@@ -1865,7 +1916,7 @@ document.addEventListener("click", async ev => {
     case "sample": {
       const now=Date.now();
       const sample=[["Mineralwasser 0,7 l",100,"Getränke",12,700,15,12,150],["Apfelschorle 0,5 l",120,"Getränke",12,500,15,20,150],["Spezi 0,5 l",150,"Getränke",20,500,8,20,150],["Helles 0,5 l",180,"Getränke",20,500,8,20,150],["Radler 0,5 l",180,"Getränke",10,500,8,20,150],["Alkoholfreies Weizen 0,5 l",180,"Getränke",6,500,8,20,150],["Kaffee",80,"Heißgetränke",0,200,0,0,0,false],["Bratwurst im Brötchen",250,"Essen",10,0,0,0,0],["Schokoriegel",100,"Snacks",10,0,0,0,0]];
-      w(async db=>{ for (const [name,price,cat,min,ml,pfand,crate,crateP,track] of sample) await db.collection("products").doc().set({name,price,cat,min,ml,pfand,crate,crateP,mhd:"",track:track!==false,base:0,baseAt:now,emptyBase:0,emptyAt:now,active:true}); }, "Beispiel-Sortiment angelegt – Preise, Pfand und Bestand bitte anpassen");
+      w(async db=>{ for (const [name,price,cat,min,ml,pfand,crate,crateP,track] of sample) await db.collection("products").doc().set({name,price,cat,min,ml,pfand,crate,crateP,mhd:"",track:track!==false,base:0,baseAt:now,emptyBase:0,emptyAt:now,active:true}); }, "Sortiment angelegt");
       break; }
     case "csv": {
       const rows=membersActive().map(m=>[m.name, centsIn(balance(m.id)), lastActivity(m.id)?new Date(lastActivity(m.id)).toLocaleString("de-DE"):""]);
@@ -1911,7 +1962,7 @@ document.addEventListener("submit", async e => {
     if (!u || u.active===false){ UI.loginSel=null; render(); return; }
     if ((await userHash(id,pw))!==u.pw){ toast("Passwort falsch."); $("#ulPw").value=""; return; }
     UI.user=id; UI.loginSel=null; UI.lastAct=Date.now(); ss.set("kantine.user", id); LOG_MUTE++; try{ await w(db=>db.doc("users/"+id).update({lastLogin:Date.now()})); } finally { LOG_MUTE--; }
-    if (UI.view==="verwaltung" && !can("admin")) location.hash="#kiosk"; render(); toast(`Hallo ${firstName(u.name)}!`); return;
+    if (UI.view==="verwaltung" && !can("admin")) location.hash="#kiosk"; render(); toast(`Gut Schlauch, ${firstName(u.name)}!`); return;
   }
   if (e.target.id==="tokForm"){ const v=$("#tokExp").value; if (await w(db=>db.doc("settings/app").set({...S.settings, tokenExp:v}), "Gespeichert")) ls.set("kantine.tokenexp", null); return; }
   if (e.target.id==="setForm"){
@@ -1926,7 +1977,7 @@ document.addEventListener("submit", async e => {
 document.addEventListener("pointerdown", ()=>{ UI.lastAct=Date.now(); if (UI.unlocked) UI.unlockAt=Date.now(); }, {passive:true});
 
 // Benutzer nach 10 Minuten ohne Bedienung abmelden
-setInterval(()=>{ if (MODE==="staff" && usersOn() && curUser() && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML) logoutUser("Nach 10 Minuten ohne Bedienung abgemeldet."); }, 15000);
+setInterval(()=>{ if (MODE==="staff" && usersOn() && curUser() && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML) logoutUser("Abgemeldet. Gut Schlauch!"); }, 15000);
 // Sperre nach 10 Minuten ohne Bedienung (wenn Team-PIN gesetzt)
 setInterval(()=>{ if (MODE==="staff" && S.settings.teamPinHash && !UI.tlocked && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML){ UI.tlocked=true; UI.unlocked=false; render(); } }, 15000);
 // Alarm-Pause: nach 2 Minuten ohne Eingabe zurück zur Namensliste, Warenkorb bleibt gemerkt
@@ -2164,7 +2215,7 @@ function qrModal(mid){
     r.querySelector("#qrNew").onclick=async()=>{
       const b=r.querySelector("#qrNew");
       if (!armed){ armed=true; b.textContent="Alter Code wird ungültig – bestätigen"; return; }
-      await makeCode(mid); toast("Neuer Code erzeugt. Der alte Link funktioniert nicht mehr."); qrModal(mid); render();
+      await makeCode(mid); toast("Neuer Code. Der alte Link gilt nicht mehr."); qrModal(mid); render();
     };
   });
 }
@@ -2188,8 +2239,8 @@ function showSetup(msg){
   $("#main").innerHTML=`<form class="login panel" id="setupForm" autocomplete="off">
       <img class="biglogo" src="${esc(CFG.logo||"")}" alt="Logo ${esc(WEHR)}" ${LOGO_OK?"":"hidden"}>
       ${ZEP_SVG}
-      <div><div class="eyebrow">${esc(WEHR)} · Gerät verbinden</div><h2>Kantine öffnen</h2></div>
-      <p class="muted" style="margin:0">Einmal pro Gerät – z. B. Tablet auf der Wache oder PC zu Hause.</p>
+      <div><h2>Gerät verbinden</h2></div>
+      <p class="muted" style="margin:0">Einmal pro Gerät.</p>
       ${msg?`<div class="note">${esc(msg)}</div>`:""}
       <label class="f">Zugangsschlüssel (GitHub)<input type="password" id="suToken" required placeholder="github_pat_…" autocomplete="off"><span class="hint">Steht in der Anleitung, Schritt 3. Bekommst du vom Kassenwart.</span></label>
       <label class="f">Kantinen-Passwort<input type="password" id="suPw" required autocomplete="current-password"></label>

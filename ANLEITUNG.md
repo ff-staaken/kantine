@@ -99,6 +99,8 @@ Ist eine Team-PIN gesetzt, sperrt sich die App nach 10 Minuten ohne Bedienung; e
 - **Barverkauf (Gäste):** Kachel **Bar bezahlt** → Artikel wählen → **Bar kassieren**. Mit Rückgeld-Rechner; zählt im Bestand und landet als Einnahme „Barverkauf“ im Kassenbuch, kein Konto wird belastet.
 - **Kontoauszug als PDF:** Verwaltung → Konten → **Auszug** (eine Person) oder **Kontoauszüge (PDF)** (alle, je Person eine Seite). Zeitraum wählen → PDF teilen, herunterladen oder drucken.
 - **Jahresabschluss:** Verwaltung → Abschluss & Einstellungen → **Jahresabschluss als PDF** – Kasse, Umsatz, Abzugslisten, Einsatzverpflegung, offene Beträge, Warenbestand und Unterschriftszeilen für die Kassenprüfung. Am besten vor dem letzten Abschluss des Jahres erstellen.
+- **Kassensturz:** Verwaltung → Kassenbuch → **Kassensturz**. Scheine und Münzen zählen (oder Gesamtbetrag eingeben), die App vergleicht mit dem Kassenbuch. Eine Differenz kann direkt als Korrektur („Kassendifferenz“) gebucht werden. Alle Kassenstürze stehen im Protokoll und im Jahresabschluss.
+- **Saisonartikel:** Verwaltung → Stammdaten → **Saison beendet**. Der Artikel verschwindet von der Strichliste und aus dem Lager, bleibt aber in Statistik und Abrechnung. Mit **Wieder anbieten** ist er zurück.
 - **Quartals-Erinnerung:** In den letzten 7 Tagen eines Quartals erinnert die Verwaltung an Abzugsliste und Sicherung.
 - **Protokoll:** Verwaltung → Protokoll zeigt, wer wann an welchem Gerät Preise, Mitglieder, Zahlungen, Kassenbuch oder Einstellungen geändert und was storniert hat. Exportierbar als CSV.
 - **Ohne Internet:** Einmal mit Internet geöffnet, startet die App danach auch offline. Buchungen werden nachgeschickt, sobald wieder Verbindung besteht.
