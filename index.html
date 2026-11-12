@@ -1,0 +1,1735 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#c4161c">
+<title>Gerätehaus-Kantine</title>
+<style>
+@font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(fonts/barlow-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:500;font-display:swap;src:url(fonts/barlow-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:600;font-display:swap;src:url(fonts/barlow-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:700;font-display:swap;src:url(fonts/barlow-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:600;font-display:swap;src:url(fonts/barlow-condensed-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:700;font-display:swap;src:url(fonts/barlow-condensed-latin-700-normal.woff2) format("woff2")}
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: sticky header with warning-stripe band and tabs; kiosk = big tap tiles, admin = sub-tabs with dense tables. */
+:root{
+  --bg:#eceef1; --surface:#ffffff; --surface-2:#f5f6f8; --ink:#15191e; --muted:#5b6570; --line:#d6dbe1;
+  --red:#c4161c; --red-ink:#ffffff; --red-soft:#fbe7e8; --bar:#e48a8d; --grid:#e3e6ea;
+  --ok:#1d7a4b; --ok-soft:#e3f3ea; --warn:#8f5400; --warn-soft:#fdf0d9; --bad:#b0151b; --bad-soft:#fbe7e8;
+  --op:#1f4f8a; --op-soft:#e4ecf7;
+  --stripe-a:#c4161c; --stripe-b:#ffffff;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111417; --surface:#1a1e23; --surface-2:#22272d; --ink:#edf0f3; --muted:#9aa4af; --line:#2e353d;
+  --red:#e0343b; --red-ink:#ffffff; --red-soft:#3a1c1e; --bar:#8e3a3e; --grid:#2a3036;
+  --ok:#4fc58a; --ok-soft:#173326; --warn:#f0b04a; --warn-soft:#3a2b12; --bad:#ff6b70; --bad-soft:#3a1c1e;
+  --op:#8fb6ec; --op-soft:#1b2a3f;
+  --stripe-a:#e0343b; --stripe-b:#22272d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111417; --surface:#1a1e23; --surface-2:#22272d; --ink:#edf0f3; --muted:#9aa4af; --line:#2e353d;
+  --red:#e0343b; --red-ink:#ffffff; --red-soft:#3a1c1e; --bar:#8e3a3e; --grid:#2a3036;
+  --ok:#4fc58a; --ok-soft:#173326; --warn:#f0b04a; --warn-soft:#3a2b12; --bad:#ff6b70; --bad-soft:#3a1c1e;
+  --op:#8fb6ec; --op-soft:#1b2a3f;
+  --stripe-a:#e0343b; --stripe-b:#22272d; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+.num{font-variant-numeric:tabular-nums}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px;padding-block:10px;flex-wrap:wrap}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:1.6rem;letter-spacing:.01em;margin:0;line-height:1;text-transform:uppercase}
+.brand .unit{color:var(--muted);font-weight:600;font-size:.95rem}
+.brand .spacer{flex:1}
+.sync{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--ok)} .dot.err{background:var(--bad)}
+.stripe{height:6px;background:repeating-linear-gradient(-45deg,var(--stripe-a) 0 12px,var(--stripe-b) 12px 24px)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{flex:none;text-decoration:none;color:var(--muted);font-family:var(--f-display);font-weight:600;font-size:1.15rem;letter-spacing:.03em;text-transform:uppercase;padding:8px 14px 10px;border-bottom:3px solid transparent}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--red)}
+nav.tabs a:focus-visible{outline:2px solid var(--red);outline-offset:-2px}
+
+main{padding-block:20px 120px}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.7rem;text-transform:uppercase;letter-spacing:.02em;margin:0;line-height:1.1;text-wrap:balance}
+h3{font-family:var(--f-display);font-weight:700;font-size:1.25rem;text-transform:uppercase;letter-spacing:.03em;margin:0}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)} .small{font-size:.86rem}
+.stack{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.section{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer;min-height:42px;text-decoration:none}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible,.tile:focus-visible,.ptile:focus-visible,.bcol:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.btn.primary{background:var(--red);border-color:var(--red);color:var(--red-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.small{min-height:34px;padding:5px 10px;font-size:.9rem}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.alarm{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],input[type=password],input[type=email],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;min-height:42px;width:100%}
+input[type=file]{width:100%}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--red)}
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem;min-width:0}
+.hint{font-weight:400;color:var(--muted);font-size:.82rem}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.seg{display:flex;gap:4px;overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px;scrollbar-width:none}
+.seg button{flex:none;border:0;background:transparent;border-radius:7px;padding:8px 14px;font-weight:600;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:700;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.neutral{background:var(--surface-2);color:var(--muted)} .pill.op{background:var(--op-soft);color:var(--op)}
+.neg{color:var(--bad)} .pos{color:var(--ok)}
+
+/* Kiosk */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 12px;min-height:76px;font-family:var(--f-display);font-weight:600;font-size:1.3rem;line-height:1.1;cursor:pointer;text-align:left;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;overflow-wrap:anywhere}
+.tile:hover{border-color:var(--red)}
+.tile:active{transform:scale(.98)}
+.tile .sub{font-family:var(--f-body);font-size:.82rem;font-weight:600;color:var(--muted)}
+.tile.op{border-color:var(--op);background:var(--op-soft)}
+.tile.round{border-color:var(--warn);background:var(--warn-soft)}
+.tile .tag{font-family:var(--f-body);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.tile.op .tag{color:var(--op)} .tile.round .tag{color:var(--warn)}
+.tile .pend{position:absolute;top:8px;right:8px;background:var(--warn);color:var(--surface);font-family:var(--f-body);font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 8px}
+.special{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.addtile{border-style:dashed;background:transparent;font-size:1.1rem;color:var(--muted)}
+.pending{background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.pending b{color:var(--warn)}
+.who{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.who.op{border-color:var(--op);background:var(--op-soft)} .who.round{border-color:var(--warn);background:var(--warn-soft)}
+.who .name{font-family:var(--f-display);font-size:2rem;font-weight:700;line-height:1;text-transform:uppercase}
+.who .bal{margin-left:auto;text-align:right}
+.who .bal b{font-size:1.4rem}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.ptile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 12px 12px;min-height:112px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px}
+.ptile.sel{border-color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
+.ptile .pn{font-family:var(--f-display);font-weight:700;font-size:1.35rem;line-height:1.05;text-transform:uppercase;overflow-wrap:anywhere;padding-right:30px}
+.ptile .pp{font-weight:600}
+.ptile .ps{font-size:.8rem;color:var(--muted);margin-top:auto;padding-right:40px}
+.ptile .ps.low{color:var(--warn);font-weight:600}
+.ptile .ps.out,.ptile .ps.exp{color:var(--bad);font-weight:700}
+.badge{position:absolute;top:8px;right:8px;min-width:34px;height:34px;border-radius:17px;background:var(--red);color:var(--red-ink);font-weight:700;font-size:1.1rem;display:flex;align-items:center;justify-content:center;padding:0 8px}
+.minus{position:absolute;bottom:8px;right:8px;width:38px;height:38px;border-radius:19px;border:1px solid var(--line);background:var(--surface-2);font-size:1.3rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cartbar{position:sticky;bottom:0;margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:12px;align-items:center;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.08)}
+.cartbar .sum{font-family:var(--f-display);font-weight:700;font-size:1.6rem}
+.cartbar .btn.primary{margin-left:auto;font-size:1.15rem;min-height:52px;padding:10px 26px}
+.wake{font-size:.78rem;font-weight:700;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 9px}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:.78rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.list li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.list li:last-child{border-bottom:0}
+.list li .grow{flex:1;min-width:0}
+
+.bigbal{font-family:var(--f-display);font-weight:700;font-size:3.2rem;line-height:1}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.kpi b{display:block;font-family:var(--f-display);font-size:1.7rem;line-height:1.1}
+.kpi .hint{display:block}
+
+/* Year review */
+.review{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.fact b{display:block;font-family:var(--f-display);font-size:2.6rem;line-height:1;font-weight:700}
+.fact span{color:var(--muted);font-weight:600}
+
+/* Chart */
+.chart{position:relative;height:220px;padding:8px 0 28px 48px}
+.chart .gl{position:absolute;left:48px;right:0;border-top:1px solid var(--grid)}
+.chart .gl span{position:absolute;right:calc(100% + 6px);top:-.6em;font-size:.75rem;color:var(--muted);white-space:nowrap}
+.chart .bars{position:absolute;left:48px;right:0;top:8px;bottom:28px;display:flex;align-items:flex-end;gap:2px}
+.bcol{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:none;border:0;padding:0 2px;cursor:pointer;position:relative;min-width:0}
+.bcol .bar{width:100%;max-width:44px;background:var(--bar);border-radius:4px 4px 0 0;min-height:0}
+.bcol[aria-pressed="true"] .bar{background:var(--red)}
+.bcol .bl{position:absolute;top:100%;margin-top:6px;font-size:.75rem;color:var(--muted);white-space:nowrap}
+.bcol[aria-pressed="true"] .bl{color:var(--ink);font-weight:700}
+.bcol .tip{position:absolute;bottom:calc(var(--h) + 6px);background:var(--ink);color:var(--bg);font-size:.75rem;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;opacity:0;pointer-events:none}
+.bcol:hover .tip,.bcol:focus-visible .tip,.bcol[aria-pressed="true"] .tip{opacity:1}
+.chart-wrap{overflow-x:auto}
+.chart-inner{min-width:480px}
+
+/* Events */
+.ev{display:grid;grid-template-columns:72px 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.date{background:var(--red);color:var(--red-ink);border-radius:8px;text-align:center;padding:8px 4px;align-self:start}
+.date .d{font-family:var(--f-display);font-size:2rem;font-weight:700;line-height:1}
+.date .m{font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.date .w{font-size:.75rem;opacity:.85}
+.ev.past .date{background:var(--surface-2);color:var(--muted)}
+.ev .body{min-width:0;display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.88rem}
+
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:28px 20px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;color:var(--muted)}
+.empty b{color:var(--ink);font-size:1.1rem}
+.note{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:10px 12px;font-weight:600;font-size:.92rem}
+.receipt{max-width:100%;max-height:70vh;border-radius:8px;border:1px solid var(--line);align-self:center}
+
+/* Modal & toast */
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(10,12,15,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+@media (min-width:640px){.overlay{align-items:center}}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:560px;max-height:calc(100% - 20px);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px;border:1px solid var(--line)}
+.modal .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.modal.wide{max-width:940px}
+.modal td input{min-height:36px;padding:6px 8px;width:110px}
+tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--line)}
+.mrow{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.mrow input{width:84px}
+.mrow input[type=date]{width:140px}
+@media (max-width:520px){.mrow{grid-template-columns:1fr 1fr}.mrow>span{grid-column:1/-1}.mrow input,.mrow input[type=date]{width:100%}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);border-radius:10px;padding:12px 14px 12px 16px;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px);width:max-content;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.toast button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:280px;margin:0 auto;width:100%}
+.pinpad button{min-height:58px;font-size:1.4rem;font-weight:700;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);cursor:pointer}
+.pindots{display:flex;gap:10px;justify-content:center}
+.pindots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted)}
+.pindots i.f{background:var(--ink);border-color:var(--ink)}
+/* Login, Kameraden-Ansicht, QR & Druck */
+.login{max-width:400px;margin:24px auto 0;display:flex;flex-direction:column;gap:14px}
+.qrbox{background:#fff;padding:10px;border-radius:10px;align-self:center;width:220px;max-width:100%}
+.qrbox svg{display:block;width:100%;height:auto}
+.linkbox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere;user-select:all}
+#printSheet{display:none}
+@media print{
+  body{background:#fff!important;color:#000!important}
+  body>*:not(#printSheet){display:none!important}
+  body::before{display:none!important}
+  #printSheet{display:grid!important;grid-template-columns:repeat(3,1fr);gap:0;font-family:var(--f-body)}
+  .pcard{border:1px dashed #888;padding:8mm 6mm;text-align:center;break-inside:avoid;display:flex;flex-direction:column;gap:2mm;align-items:center}
+  .pcard .pn{font-family:var(--f-display);font-weight:700;font-size:15pt;text-transform:uppercase}
+  .pcard .pu{font-size:8pt;color:#444}
+  .pcard svg{width:38mm;height:38mm}
+  .pcard .pt{font-size:7.5pt;color:#333;line-height:1.3}
+  @page{margin:10mm}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:520px){.who .name{font-size:1.6rem}.bigbal{font-size:2.6rem}.ev{grid-template-columns:58px 1fr}.fact b{font-size:2.1rem}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="gut"><div class="wrap brand">
+    <h1>Kantine</h1><span class="unit" id="unitName">Freiwillige Feuerwehr</span>
+    <span class="spacer"></span>
+    <span class="wake" id="wake" hidden>Bildschirm bleibt an</span>
+    <span class="sync" id="sync"><i class="dot" id="syncDot"></i><span id="syncText">Verbinde …</span></span>
+  </div>
+  <div class="wrap"><nav class="tabs" id="tabs" aria-label="Bereiche">
+    <a href="#kiosk" data-v="kiosk">Strichliste</a>
+    <a href="#termine" data-v="termine">Termine</a>
+    <a href="#lager" data-v="lager">Lager</a>
+    <a href="#statistik" data-v="statistik">Statistik</a>
+    <a href="#verwaltung" data-v="verwaltung">Verwaltung</a>
+  </nav></div></div>
+  <div class="stripe"></div>
+</header>
+<main class="gut"><div class="wrap" id="main"><div class="empty"><b>Kantine wird geladen …</b><span>Mitglieder, Artikel und Buchungen kommen gleich.</span></div></div></main>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script src="config.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script>
+(() => {
+"use strict";
+// ================= State =================
+const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements"];
+const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
+COLS.forEach(c => S[c] = {});
+const UI = { view:"kiosk", sel:null, carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
+  adminTab:"konten", statProd:"", statMeasure:"q", statMonth:null, year:new Date().getFullYear(), cashYear:new Date().getFullYear(), opYear:new Date().getFullYear(), lastAct:Date.now() };
+const CATS = ["Getränke","Heißgetränke","Essen","Snacks","Sonstiges"];
+const OPKINDS = ["Einsatz","Übung","Dienstabend","Sonstiges"];
+const CASHCATS = ["Einkauf Kantine","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
+const VIEWS = ["kiosk","konto","termine","lager","statistik","verwaltung"];
+const DAY = 864e5;
+
+let MODE="boot";
+const CFG = window.KANTINE_CONFIG || {};
+const ls = { get(k){ try{return localStorage.getItem(k)}catch(e){return null} }, set(k,v){ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v) }catch(e){} } };
+UI.meId = ls.get("kantine.me");
+try{ UI.carts = JSON.parse(ls.get("kantine.carts")||"{}") || {}; }catch(e){ UI.carts={}; }
+for (const [k,c] of Object.entries(UI.carts)) if (!c || Date.now()-(c.ts||0) > DAY || !Object.keys(c.items||{}).length) delete UI.carts[k];
+const saveCarts = () => ls.set("kantine.carts", JSON.stringify(UI.carts));
+
+// ================= Helpers =================
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR"});
+const nf = new Intl.NumberFormat("de-DE",{maximumFractionDigits:0});
+const nf1 = new Intl.NumberFormat("de-DE",{maximumFractionDigits:1});
+const eur = c => fmt.format((c||0)/100);
+const eurS = c => (c>0?"+":"") + eur(c);
+function parseEur(s){ s=String(s||"").trim().replace(/\s|€/g,""); if(!s) return NaN; if(s.includes(",")) s=s.replace(/\./g,"").replace(",","."); const v=Number(s); return isFinite(v)? Math.round(v*100) : NaN; }
+const centsIn = c => (c/100).toFixed(2).replace(".",",");
+const deTs = new Intl.DateTimeFormat("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+const tsStr = t => deTs.format(new Date(t));
+const dDate = s => s ? new Date(s+"T12:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "";
+const isoLocal = d => { d=new Date(d); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const today = () => isoLocal(Date.now());
+const ymOf = ts => isoLocal(ts).slice(0,7);
+const MONTHS = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+const ymLabel = (ym, long) => { const [y,m]=ym.split("-").map(Number); return long ? new Date(y,m-1,15).toLocaleDateString("de-DE",{month:"long",year:"numeric"}) : MONTHS[m-1]+(m===1?" "+String(y).slice(2):""); };
+const byName = (a,b) => (a.name||"").localeCompare(b.name||"","de",{sensitivity:"base"});
+const list = col => Object.entries(S[col]).map(([id,d]) => ({id,...d}));
+const membersActive = () => list("members").filter(m => m.active !== false).sort(byName);
+const productsActive = () => list("products").filter(p => p.active !== false).sort((a,b)=>(CATS.indexOf(a.cat)-CATS.indexOf(b.cat)) || byName(a,b));
+const mName = id => S.members[id]?.name || "Unbekannt";
+const isProd = b => b.p && !String(b.p).startsWith("event:");
+const firstName = n => String(n||"").split(" ")[0];
+
+function balance(mid){
+  let b = S.members[mid]?.carry || 0;
+  for (const p of Object.values(S.payments)) if (p.m===mid) b += p.amount||0;
+  for (const k of Object.values(S.bookings)) if (k.m===mid) b -= (k.price||0)*(k.qty||1);
+  return b;
+}
+function lastActivity(mid){ let t=0; for (const k of Object.values(S.bookings)) if (k.m===mid && k.ts>t) t=k.ts; for (const p of Object.values(S.payments)) if (p.m===mid && p.ts>t) t=p.ts; return t; }
+function soldSince(pid, at){ let s=0; for (const b of Object.values(S.bookings)) if (b.p===pid && (b.ts||0) > (at||0)) s += b.qty||1; return s; }
+const stock = pid => { const p=S.products[pid]; return p ? (p.base||0) - soldSince(pid, p.baseAt) : 0; };
+const empties = pid => { const p=S.products[pid]; return p && p.pfand ? Math.max(0,(p.emptyBase||0) + soldSince(pid, p.emptyAt||p.baseAt)) : 0; };
+function stockState(p){ if (p.track===false) return "none"; const s=stock(p.id); if (s<=0) return "out"; if (s<=(p.min||0)) return "low"; return "ok"; }
+function units(n, crate){ if (!(crate>1) || n<=0) return nf.format(n)+(crate>1?" Fl.":""); const k=Math.floor(n/crate), r=n%crate; return `${k} ${k===1?"Kasten":"Kästen"}${r?` + ${r} Fl.`:""}`; }
+function mhdState(p){ if (!p.mhd) return null; const d=(new Date(p.mhd+"T12:00:00") - new Date(today()+"T12:00:00"))/DAY; return d<0?"exp":d<=7?"soon":"ok"; }
+function mhdText(p){ const s=mhdState(p); if(!s) return ""; const d=Math.round((new Date(p.mhd+"T12:00:00") - new Date(today()+"T12:00:00"))/DAY); return s==="exp"?`MHD abgelaufen (${dDate(p.mhd)})`: d===0?"MHD heute": `MHD in ${d} ${d===1?"Tag":"Tagen"}`; }
+
+// Einsatz / Runde
+function opTotals(oid){
+  const o=S.ops[oid]||{}; const items={...(o.carry?.items||{})}; let total=o.carry?.total||0;
+  for (const b of Object.values(S.bookings)) if (b.o===oid){ items[b.n]=(items[b.n]||0)+(b.qty||1); total += (b.price||0)*(b.qty||1); }
+  return {items,total};
+}
+function roundTotal(rid){ let t=S.rounds[rid]?.carryTotal||0; for (const b of Object.values(S.bookings)) if (b.r===rid) t+=(b.price||0)*(b.qty||1); return t; }
+
+function target(key){
+  if (!key) return null; const i=key.indexOf(":"); const t=key.slice(0,i), id=key.slice(i+1);
+  if (t==="m" && S.members[id]) return {t,id,key,label:S.members[id].name};
+  if (t==="o" && S.ops[id]) { const o=S.ops[id]; return {t,id,key,label:o.title,o}; }
+  if (t==="r" && S.rounds[id]) { const r=S.rounds[id]; return {t,id,key,label:`Runde von ${mName(r.payer)}`,r}; }
+  return null;
+}
+const cartOf = key => UI.carts[key]?.items || {};
+function setCart(key, items){ if (Object.keys(items).length) UI.carts[key]={items,ts:Date.now()}; else delete UI.carts[key]; saveCarts(); }
+
+// Monatsstatistik: abgeschlossene Monate (stats) + laufende Buchungen
+function monthAgg(){
+  const out={};
+  for (const [ym,doc] of Object.entries(S.stats)){ out[ym]={}; for (const [pid,v] of Object.entries(doc.items||{})) out[ym][pid]={...v}; }
+  for (const b of Object.values(S.bookings)){ if (!isProd(b)) continue;
+    const ym=ymOf(b.ts||Date.now()); const p=S.products[b.p]||{}; const o=(out[ym]=out[ym]||{});
+    const e=(o[b.p]=o[b.p]||{n:b.n,q:0,c:0,l:0,cat:p.cat||""});
+    e.q+=b.qty||1; e.c+=(b.price||0)*(b.qty||1); e.l+=((p.ml||0)*(b.qty||1))/1000; if(!e.cat) e.cat=p.cat||""; }
+  return out;
+}
+
+async function sha(s){
+  try{ const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("kantine:"+s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+  catch(e){ let h=5381; for(const c of "kantine:"+s) h=((h<<5)+h+c.charCodeAt(0))|0; return "d"+(h>>>0).toString(16); }
+}
+
+// ================= Writes =================
+function errText(e){
+  const c = e && e.code;
+  if (c==="invalid_argument") return "Dieser Eintrag existiert nicht mehr – die Ansicht wird aktualisiert.";
+  if (c==="quota_exceeded") return "Speicher voll. Bitte unter Verwaltung einen Abschluss machen, damit alte Buchungen zusammengefasst werden.";
+  if (c==="resource_exhausted") return "Zu viele Aktionen auf einmal. Kurz warten und erneut versuchen.";
+  return "Speichern fehlgeschlagen. Bitte Verbindung prüfen und erneut versuchen.";
+}
+async function w(fn, okMsg){
+  if (!S.db){ toast("Keine Verbindung zur Datenbank."); return false; }
+  try { await fn(S.db); if (okMsg) toast(okMsg); return true; }
+  catch(e){
+    if (e && e.code==="unavailable"){ await new Promise(r=>setTimeout(r,400+Math.random()*600)); try{ await fn(S.db); if(okMsg) toast(okMsg); return true; }catch(e2){ e=e2; } }
+    if (e && e.code==="invalid_argument" && S.canWrite==null){ S.readOnly=true; render(); }
+    toast(errText(e)); console.error(e); return false;
+  }
+}
+const clean = o => { const r={}; for (const [k,v] of Object.entries(o)) if (v!==undefined) r[k]=v; return r; };
+
+async function uploadReceipt(file){
+  if (!file) return null;
+  if (!S.assets) throw {code:"no_assets"};
+  let blob=file;
+  if (file.type.startsWith("image/") && file.type!=="image/svg+xml"){
+    try{ const bmp=await createImageBitmap(file); const sc=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+      const cv=document.createElement("canvas"); cv.width=Math.round(bmp.width*sc); cv.height=Math.round(bmp.height*sc);
+      cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
+      blob = await new Promise(r=>cv.toBlob(r,"image/jpeg",.82)) || file; }catch(e){ blob=file; }
+  }
+  const res = await S.assets.upload(blob);
+  return res.id;
+}
+
+// ================= Toast & Modal =================
+let toastTimer=null;
+function toast(msg, action){
+  clearTimeout(toastTimer);
+  const root=$("#toastRoot");
+  root.innerHTML = `<div class="toast" role="status"><span>${esc(msg)}</span>${action?`<button type="button" id="toastAct">${esc(action.label)}</button>`:""}</div>`;
+  if (action) $("#toastAct").onclick = () => { root.innerHTML=""; action.fn(); };
+  toastTimer=setTimeout(()=>{ root.innerHTML=""; }, action?9000:3800);
+}
+function modal(html, onMount, wide){
+  const root=$("#modalRoot");
+  root.innerHTML = `<div class="overlay" id="ov"><div class="modal${wide?" wide":""}" role="dialog" aria-modal="true">${html}</div></div>`;
+  $("#ov").addEventListener("click", e => { if (e.target.id==="ov") closeModal(); });
+  root.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeModal);
+  const first = root.querySelector("input:not([type=checkbox]):not([type=file]),select,textarea"); if(first) setTimeout(()=>first.focus(),30);
+  if (onMount) onMount(root);
+}
+function closeModal(){ $("#modalRoot").innerHTML=""; }
+document.addEventListener("keydown", e => { if (e.key==="Escape" && $("#modalRoot").innerHTML) closeModal(); });
+function confirmBox(title, text, btn, fn, danger){
+  modal(`<h3>${esc(title)}</h3><p style="margin:0">${text}</p><div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn ${danger?"danger":"primary"}" id="cOk">${esc(btn)}</button></div>`,
+    r => { r.querySelector("#cOk").onclick = async ()=>{ r.querySelector("#cOk").disabled=true; await fn(); closeModal(); }; });
+}
+async function copyText(text, title){
+  try{ await navigator.clipboard.writeText(text); toast("Kopiert – jetzt z. B. in WhatsApp einfügen"); return; }catch(e){}
+  modal(`<h3>${esc(title||"Text kopieren")}</h3><p class="muted" style="margin:0">Text markieren und kopieren:</p><textarea id="cpTxt" rows="10" readonly>${esc(text)}</textarea><div class="actions"><button class="btn primary" data-close>Fertig</button></div>`,
+    r=>{ const t=r.querySelector("#cpTxt"); t.focus(); t.select(); });
+}
+
+// ================= Render =================
+const canWrite = () => !S.readOnly && S.canWrite !== false && !!S.db;
+const isAdmin = () => S.canEdit && !S.readOnly;
+function adminOpen(){
+  if (!isAdmin()) return false;
+  if (!S.settings.pinHash) return true;
+  if (UI.unlocked && Date.now()-UI.unlockAt < 15*60*1000) return true;
+  UI.unlocked=false; return false;
+}
+
+function render(){
+  document.querySelectorAll("#tabs a").forEach(a => {
+    a.setAttribute("aria-current", a.dataset.v===UI.view ? "page" : "false");
+    if (a.dataset.v==="verwaltung") a.hidden = !S.canEdit;
+  });
+  $("#unitName").textContent = S.settings.unit || "Freiwillige Feuerwehr";
+  const main = $("#main");
+  const keep = {}; main.querySelectorAll("input[id],select[id],textarea[id]").forEach(el => { if (el.type!=="file") keep[el.id] = el.type==="checkbox"?el.checked:el.value; });
+  const act = document.activeElement && main.contains(document.activeElement) ? document.activeElement.id : null;
+  let sel=null; try{ if (act) sel=[document.activeElement.selectionStart, document.activeElement.selectionEnd]; }catch(e){}
+  let html;
+  if (MODE!=="staff") return;
+  if (S.settings.teamPinHash && UI.tlocked){
+    main.innerHTML=`<div class="stack" style="max-width:360px;margin:0 auto;text-align:center"><h2>Kantine gesperrt</h2><p class="muted" style="margin:0">Team-PIN oder Admin-PIN eingeben.</p>
+    <div class="pindots" id="tpinDots">${[0,1,2,3,4,5].map(()=>"<i></i>").join("")}</div>
+    <div class="pinpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="tpin" data-k="${n}">${n}</button>`).join("")}<button data-act="tpin" data-k="c" aria-label="Löschen">⌫</button><button data-act="tpin" data-k="0">0</button><button data-act="tpin" data-k="ok" style="background:var(--red);color:var(--red-ink);border-color:var(--red)">OK</button></div></div>`;
+    return;
+  }
+  if (!S.db && S.failed) html = `<div class="empty"><b>Die Daten konnten nicht geladen werden.</b><span>Bitte Internetverbindung prüfen und die Seite neu laden.</span></div>`;
+  else if (S.loaded.size < COLS.length+1) html = `<div class="empty"><b>Kantine wird geladen …</b><span>${S.offline?"Die Daten sind gerade nicht erreichbar. Die Ansicht aktualisiert sich, sobald die Verbindung steht.":"Mitglieder, Artikel und Buchungen kommen gleich."}</span></div>`;
+  else html = ({kiosk:vKiosk, konto:vKonto, termine:vTermine, lager:vLager, statistik:vStats, verwaltung:vAdmin}[UI.view] || vKiosk)();
+  main.innerHTML = html;
+  for (const [id,v] of Object.entries(keep)){ const el=document.getElementById(id); if (el && main.contains(el) && !el.dataset.fresh){ if (el.type==="checkbox") el.checked=v; else el.value=v; } }
+  if (act){ const el=document.getElementById(act); if (el){ el.focus(); try{ if(sel && sel[0]!=null) el.setSelectionRange(sel[0],sel[1]); }catch(e){} } }
+  wakeCheck();
+}
+const roNote = () => canWrite() ? "" : `<div class="note">Nur Ansicht: Dein Zugang ist zum Lesen freigeschaltet. Buchen kann der Kassenwart.</div>`;
+
+// ---------- Strichliste ----------
+function vKiosk(){
+  const ms = membersActive(); const ps = productsActive();
+  if (!ms.length || !ps.length){
+    return `<div class="stack"><h2>Strichliste</h2>
+      <div class="empty"><b>${!ms.length?"Noch keine Mitglieder angelegt.":"Noch keine Artikel angelegt."}</b>
+      <span>Der Kassenwart legt unter <i>Verwaltung → Stammdaten</i> zuerst Mitglieder und das Sortiment mit Preisen an. Danach bucht der Kassenwart bei der Ausgabe mit zwei Fingertipps an.</span>
+      ${S.canEdit?`<button class="btn primary" data-act="goadmin" data-tab="stamm">Zu den Stammdaten</button>`:""}</div></div>`;
+  }
+  const t = target(UI.sel);
+  if (t) return vKioskProducts(t, ps);
+  UI.sel=null;
+  const q = UI.search.trim().toLowerCase();
+  const shown = ms.filter(m => !q || m.name.toLowerCase().includes(q));
+  const ops = list("ops").filter(o=>o.open).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const rounds = list("rounds").filter(r=>r.open && S.members[r.payer]).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const pend = Object.entries(UI.carts).map(([k,c])=>({k,c,t:target(k)})).filter(x=>x.t);
+  const recent = list("bookings").filter(b => Date.now()-(b.ts||0) < 15*60*1000 && isProd(b)).sort((a,b)=>b.ts-a.ts).slice(0,8);
+  const cnt = items => Object.values(items).reduce((s,q)=>s+q,0);
+  return `<div class="stack">
+    ${pend.length?`<div class="pending"><b>Angefangene Buchungen – noch nicht gebucht</b>
+      ${pend.map(x=>`<div class="row between"><span><b style="color:inherit">${esc(x.t.label)}</b> · ${cnt(x.c.items)} Artikel · seit ${new Date(x.c.ts).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}</span><span class="row"><button class="btn small primary" data-act="pick" data-key="${esc(x.k)}">Weiter buchen</button><button class="btn small ghost" data-act="dropcart" data-key="${esc(x.k)}">Verwerfen</button></span></div>`).join("")}</div>`:""}
+    ${roNote()}
+    <div class="section"><div class="eyebrow">Auf die Wehr oder eine Runde buchen</div>
+      <div class="special">
+        ${ops.map(o=>{const tt=opTotals(o.id).total;return `<button class="tile op" data-act="pick" data-key="o:${o.id}"><span class="tag">${esc(o.kind||"Einsatz")} · ${dDate(o.date).slice(0,6)}</span>${esc(o.title)}<span class="sub">Verpflegung bisher ${eur(tt)}</span>${UI.carts["o:"+o.id]?`<span class="pend">offen</span>`:""}</button>`}).join("")}
+        ${rounds.map(r=>`<button class="tile round" data-act="pick" data-key="r:${r.id}"><span class="tag">Runde${r.reason?` · ${esc(r.reason)}`:""}</span>${esc(mName(r.payer))} gibt aus<span class="sub">bisher ${eur(roundTotal(r.id))}</span>${UI.carts["r:"+r.id]?`<span class="pend">offen</span>`:""}</button>`).join("")}
+        ${canWrite()?`<button class="tile addtile" data-act="opnew">+ Einsatz oder Übung verpflegen</button><button class="tile addtile" data-act="roundnew">+ Runde ausgeben</button>`:""}
+      </div></div>
+    <div class="row between"><div><div class="eyebrow">Ausgabe – wer bekommt was?</div><h2>Namen antippen</h2></div>
+      <div style="flex:1;min-width:200px;max-width:340px"><input type="search" id="kSearch" placeholder="Name suchen …" aria-label="Name suchen" value="${esc(UI.search)}"></div></div>
+    <div class="mgrid">${shown.map(m=>`<button class="tile" data-act="pick" data-key="m:${m.id}">${esc(m.name)}${UI.carts["m:"+m.id]?`<span class="pend">offen</span>`:""}</button>`).join("") || `<p class="muted">Kein Name passt zu „${esc(UI.search)}“.</p>`}</div>
+    ${recent.length?`<div class="panel section"><div class="row between"><h3>Gerade gebucht</h3><span class="muted small">Stornieren bis 15 Minuten nach der Buchung</span></div>
+      <ul class="list">${recent.map(b=>`<li><span class="grow"><b>${esc(b.o?(S.ops[b.o]?.title||"Einsatz"):b.r?`Runde ${mName(b.m)}`:mName(b.m))}</b> · ${b.qty}× ${esc(b.n)} <span class="muted">· ${new Date(b.ts).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${b.by?` · ${esc(String(b.by).split("@")[0])}`:""}</span></span><span class="num">${eur(b.price*b.qty)}</span>${canWrite()?`<button class="btn small" data-act="storno" data-id="${b.id}">Stornieren</button>`:""}</li>`).join("")}</ul></div>`:""}
+  </div>`;
+}
+function vKioskProducts(t, ps){
+  const cart = cartOf(t.key);
+  let total=0, items=0;
+  for (const [pid,q] of Object.entries(cart)){ const p=S.products[pid]; if(p){ total+=p.price*q; items+=q; } }
+  const groups = CATS.concat(["_"]).map(c => [c, ps.filter(p => (CATS.includes(p.cat)?p.cat:"_")===c)]).filter(g=>g[1].length);
+  let head;
+  if (t.t==="m"){ const bal=balance(t.id); head=`<div class="who"><button class="btn" data-act="unpick">← Zurück</button><span class="name">${esc(t.label)}</span><span class="bal"><span class="eyebrow">Kontostand</span><br><b class="num ${bal<0?"neg":"pos"}">${eur(bal)}</b></span></div>`; }
+  else if (t.t==="o"){ head=`<div class="who op"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--op)">${esc(t.o.kind||"Einsatz")} · ${dDate(t.o.date)} · geht auf die Wehr</span><br><span class="name">${esc(t.label)}</span></span><span class="bal"><span class="eyebrow">Bisher</span><br><b class="num">${eur(opTotals(t.id).total)}</b><br><button class="btn small" data-act="opend" data-id="${t.id}" style="margin-top:6px">Verpflegung beenden</button></span></div>`; }
+  else { head=`<div class="who round"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--warn)">Runde${t.r.reason?` · ${esc(t.r.reason)}`:""} · alles geht auf ${esc(mName(t.r.payer))}</span><br><span class="name">${esc(t.label)}</span></span><span class="bal"><span class="eyebrow">Bisher</span><br><b class="num">${eur(roundTotal(t.id))}</b><br><button class="btn small" data-act="roundend" data-id="${t.id}" style="margin-top:6px">Runde beenden</button></span></div>`; }
+  return `<div class="stack">${head}${roNote()}
+    ${groups.map(([c,arr])=>`<div class="section"><div class="eyebrow">${c==="_"?"Weitere":esc(c)}</div><div class="pgrid">${arr.map(p=>{
+      const q=cart[p.id]||0, st=stockState(p), s=stock(p.id), mh=mhdState(p);
+      const stTxt = mh==="exp"?mhdText(p) : st==="none"?(mh==="soon"?mhdText(p):"") : st==="out"?"Laut Bestand leer" : st==="low"?`Nur noch ${s}` : (mh==="soon"?mhdText(p):`${s} da`);
+      const cls = mh==="exp"?"exp":st==="out"?"out":(st==="low"||mh==="soon")?"low":"";
+      return `<div class="ptile ${q?"sel":""}" role="button" tabindex="0" data-act="add" data-id="${p.id}" aria-label="${esc(p.name)} hinzufügen">
+        <span class="pn">${esc(p.name)}</span><span class="pp num">${eur(p.price)}</span><span class="ps ${cls}">${stTxt}</span>
+        ${q?`<span class="badge num">${q}</span><button class="minus" data-act="sub" data-id="${p.id}" aria-label="Eins weniger ${esc(p.name)}">−</button>`:""}</div>`;
+    }).join("")}</div></div>`).join("")}
+    <div class="cartbar"><div><div class="eyebrow">${items?`${items} Artikel`:"Noch nichts gewählt"}</div><div class="sum num">${eur(total)}</div></div>
+      ${items?`<button class="btn alarm" data-act="alarm">Alarm – später weiter</button><button class="btn" data-act="clear">Leeren</button>`:""}
+      <button class="btn primary" data-act="book" ${items&&canWrite()?"":"disabled"}>${t.t==="m"?`Auf ${esc(firstName(t.label))} buchen`:t.t==="o"?"Auf die Wehr buchen":`Auf ${esc(firstName(mName(t.r.payer)))} buchen`}</button></div>
+  </div>`;
+}
+
+// ---------- Mein Konto ----------
+function vKonto(){
+  const ms = membersActive();
+  const me = UI.meId && S.members[UI.meId] ? UI.meId : null;
+  const picker = `<label class="f" style="max-width:360px">Wer bist du?<select id="meSel"><option value="">Bitte Namen wählen</option>${ms.map(m=>`<option value="${m.id}" ${m.id===me?"selected":""}>${esc(m.name)}</option>`).join("")}</select><span class="hint">Wird nur auf diesem Gerät gemerkt.</span></label>`;
+  if (!ms.length) return `<div class="stack"><h2>Mein Konto</h2><div class="empty"><b>Noch keine Mitglieder angelegt.</b><span>Sobald der Kassenwart die Mitgliederliste angelegt hat, wählst du hier deinen Namen.</span></div></div>`;
+  if (!me) return `<div class="stack"><h2>Mein Konto</h2>${picker}<div class="empty"><b>Wähle deinen Namen</b><span>Dann siehst du Kontostand, deine letzten Striche und Einzahlungen und kannst dich zu Terminen anmelden.</span></div></div>`;
+  const bal = balance(me), m=S.members[me];
+  const tx = [
+    ...list("bookings").filter(b=>b.m===me).map(b=>({ts:b.ts, txt:`${b.qty}× ${b.n}${b.r?` <span class="pill warn">Runde${S.rounds[b.r]?.reason?` · ${esc(S.rounds[b.r].reason)}`:""}</span>`:""}`, amt:-(b.price*b.qty)})),
+    ...list("payments").filter(p=>p.m===me).map(p=>({ts:p.ts, txt:esc(p.note||"Einzahlung"), amt:p.amount}))
+  ].sort((a,b)=>b.ts-a.ts);
+  const ms0 = new Date(); ms0.setDate(1); ms0.setHours(0,0,0,0);
+  const monthSpend = list("bookings").filter(b=>b.m===me && b.ts>=ms0.getTime()).reduce((s,b)=>s+b.price*b.qty,0);
+  const up = list("events").filter(e=>e.date>=today()).sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||""))).slice(0,3);
+  return `<div class="stack"><h2>Mein Konto</h2>${picker}
+    <div class="panel row between" style="align-items:flex-end">
+      <div><div class="eyebrow">Kontostand ${esc(m.name)}</div><div class="bigbal num ${bal<0?"neg":"pos"}">${eur(bal)}</div>
+      <div class="muted">${bal<0?"Wird mit deiner nächsten Aufwandsentschädigung verrechnet.":bal>0?"Guthaben – wird mit dem nächsten Verzehr verrechnet.":"Alles verrechnet."}</div></div>
+      <div class="kpi" style="min-width:170px"><span class="eyebrow">Diesen Monat</span><b class="num">${eur(monthSpend)}</b></div></div>
+    ${up.length?`<div class="section"><h3>Nächste Termine</h3>${up.map(e=>evCard(e,true)).join("")}</div>`:""}
+    <div class="panel section"><h3>Buchungen</h3>
+      ${tx.length?`<ul class="list">${tx.slice(0,60).map(t=>`<li><span class="grow">${t.txt}<br><span class="muted small">${tsStr(t.ts)}</span></span><b class="num ${t.amt<0?"":"pos"}">${eurS(t.amt)}</b></li>`).join("")}</ul>`:`<p class="muted" style="margin:0">Seit dem letzten Abschluss noch keine Buchungen.</p>`}
+      ${m.carry?`<p class="muted" style="margin:0">Übertrag aus früheren Abschlüssen: <b class="num">${eurS(m.carry)}</b></p>`:""}</div></div>`;
+}
+
+// ---------- Termine ----------
+function evCard(e, compact){
+  const d = new Date(e.date+"T12:00:00");
+  const sus = list("signups").filter(s=>s.e===e.id && S.members[s.m]).sort((a,b)=>mName(a.m).localeCompare(mName(b.m),"de"));
+  const persons = sus.reduce((s,x)=>s+(x.count||1),0);
+  const past = e.date < today(); const closed = e.deadline && e.deadline < today();
+  const mine = UI.meId && sus.find(s=>s.m===UI.meId); const open = UI.openEvent===e.id;
+  return `<article class="ev ${past?"past":""}">
+    <div class="date"><div class="w">${d.toLocaleDateString("de-DE",{weekday:"short"})}</div><div class="d">${d.getDate()}</div><div class="m">${d.toLocaleDateString("de-DE",{month:"short"})}</div></div>
+    <div class="body">
+      <div class="row between"><h3>${esc(e.title)}</h3>
+        <span class="row">${e.billed?`<span class="pill neutral">Abgerechnet</span>`:""}${closed&&!past?`<span class="pill warn">Anmeldeschluss vorbei</span>`:""}<span class="pill ${persons?"ok":"neutral"}">${persons} ${persons===1?"Person":"Personen"}</span></span></div>
+      <div class="muted">${e.time?`${esc(e.time)} Uhr · `:""}${e.price?`${eur(e.price)} pro Person`:"Kostenlos"}${e.deadline?` · Anmeldung bis ${dDate(e.deadline)}`:""}</div>
+      ${e.desc&&!compact?`<div>${esc(e.desc).replace(/\n/g,"<br>")}</div>`:""}
+      ${mine?`<div class="pill ok" style="align-self:flex-start">Du bist dabei${mine.count>1?` mit ${mine.count} Personen`:""}</div>`:""}
+      <div class="row">
+        ${!past&&canWrite()?`<button class="btn small ${mine?"":"primary"}" data-act="signup" data-id="${e.id}">${mine?"Anmeldung ändern":"Anmelden"}</button>`:""}
+        ${sus.length?`<button class="btn small ghost" data-act="evtoggle" data-id="${e.id}">${open?"Liste ausblenden":"Wer kommt?"}</button>`:""}
+        ${!compact&&adminOpen()?`<button class="btn small" data-act="evedit" data-id="${e.id}">Bearbeiten</button>${e.price&&!e.billed&&persons?`<button class="btn small" data-act="evbill" data-id="${e.id}">Kosten auf Konten buchen</button>`:""}`:""}
+      </div>
+      ${open&&sus.length?`<div class="chips">${sus.map(s=>`<span class="chip">${esc(mName(s.m))}${s.count>1?` +${s.count-1}`:""}${s.note?` · <i>${esc(s.note)}</i>`:""}</span>`).join("")}</div>`:""}
+    </div></article>`;
+}
+function vTermine(){
+  const evs = list("events").sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||"")));
+  const up = evs.filter(e=>e.date>=today()), past = evs.filter(e=>e.date<today()).reverse().slice(0,6);
+  return `<div class="stack">
+    <div class="row between"><div><div class="eyebrow">Grillabend, Übungsessen, Kameradschaftsabend</div><h2>Termine</h2></div>
+      ${adminOpen()?`<button class="btn primary" data-act="evnew">Termin anlegen</button>`:""}</div>
+    ${roNote()}
+    ${up.length?up.map(e=>evCard(e)).join(""):`<div class="empty"><b>Keine anstehenden Termine.</b><span>${S.canEdit?"Leg unter „Termin anlegen“ das nächste Essen oder den nächsten Kameradschaftsabend an.":"Der Kassenwart trägt hier Essen und Veranstaltungen ein, zu denen ihr euch anmeldet."}</span></div>`}
+    ${past.length?`<button class="btn ghost" data-act="pasttoggle" style="align-self:flex-start">${UI.showPast?"Vergangene ausblenden":`Vergangene Termine (${past.length})`}</button>${UI.showPast?past.map(e=>evCard(e)).join(""):""}`:""}
+  </div>`;
+}
+
+// ---------- Lager ----------
+function shoppingNeed(){
+  return productsActive().filter(p=>p.track!==false && stockState(p)!=="ok").map(p=>{
+    const s=stock(p.id); const need=Math.max(1,(p.min||0)*2-s);
+    const txt = p.crate>1 ? `ca. ${Math.max(1,Math.ceil(need/p.crate))} ${Math.ceil(need/p.crate)===1?"Kasten":"Kästen"}` : `ca. ${need} Stück`;
+    return {p,s,txt};
+  });
+}
+function vLager(){
+  const ps = productsActive();
+  const tracked = ps.filter(p=>p.track!==false);
+  const need = shoppingNeed();
+  const mh = ps.filter(p=>mhdState(p)==="exp"||mhdState(p)==="soon");
+  const pf = ps.filter(p=>p.pfand>0);
+  const shop = list("shopping").sort((a,b)=>(a.done?1:0)-(b.done?1:0) || a.ts-b.ts);
+  const adm = adminOpen();
+  const pfandVal = pf.reduce((s,p)=>{ const e=empties(p.id); return s + e*p.pfand + (p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0); },0);
+  return `<div class="stack">
+    <div class="row between"><div><div class="eyebrow">Kühlschrank &amp; Lager</div><h2>Bestand</h2></div>
+      ${tracked.length?`<div class="row"><button class="btn" data-act="inventur">Inventur</button>${pf.length?`<button class="btn" data-act="leergut">Leergut zurückgegeben</button>`:""}<button class="btn primary" data-act="einkauf">Einkauf einbuchen</button></div>`:""}</div>
+    ${!ps.length?`<div class="empty"><b>Noch keine Artikel angelegt.</b><span>Sobald es ein Sortiment gibt, siehst du hier, was noch da ist und was nachgekauft werden muss.</span></div>`:`
+    <div class="kpis"><div class="kpi"><span class="eyebrow">Nachkaufen</span><b class="num ${need.length?"neg":""}">${need.length}</b><span class="hint">Artikel unter Mindestbestand</span></div>
+      <div class="kpi"><span class="eyebrow">MHD prüfen</span><b class="num ${mh.length?"neg":""}">${mh.length}</b><span class="hint">abgelaufen oder in 7 Tagen</span></div>
+      <div class="kpi"><span class="eyebrow">Leergut-Pfand</span><b class="num">${eur(pfandVal)}</b><span class="hint">liegt im Lager, geschätzt</span></div>
+      <div class="kpi"><span class="eyebrow">Warenwert (VK)</span><b class="num">${eur(tracked.reduce((s,p)=>s+Math.max(0,stock(p.id))*p.price,0))}</b></div></div>
+    ${mh.length?`<div class="panel section"><h3>Mindesthaltbarkeit</h3><ul class="list">${mh.sort((a,b)=>a.mhd.localeCompare(b.mhd)).map(p=>`<li><span class="pill ${mhdState(p)==="exp"?"bad":"warn"}">${mhdState(p)==="exp"?"Abgelaufen":"Bald"}</span><span class="grow"><b>${esc(p.name)}</b> <span class="muted">· ${mhdText(p)}</span></span>${p.track!==false?`<span class="muted num">${stock(p.id)} Stück</span>`:""}</li>`).join("")}</ul><p class="muted small" style="margin:0">Zuerst verbrauchen oder beim nächsten Termin anbieten. Das MHD wird beim Einkauf oder unter Stammdaten gepflegt.</p></div>`:""}
+    <div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Bestand</th><th class="r">Mindestens</th><th>MHD</th><th>Status</th></tr></thead><tbody>
+      ${ps.map(p=>{const st=stockState(p),s=stock(p.id),m=mhdState(p);return `<tr><td><b>${esc(p.name)}</b><br><span class="muted small">${esc(p.cat||"")}</span></td><td class="r num">${st==="none"?"–":units(s,p.crate)}</td><td class="r num">${st==="none"?"–":(p.min||0)}</td><td class="num">${p.mhd?`<span class="${m==="exp"?"neg":m==="soon"?"":""}">${dDate(p.mhd)}</span>`:"–"}</td><td>${st==="none"?`<span class="pill neutral">Ohne Zählung</span>`:st==="out"?`<span class="pill bad">Leer</span>`:st==="low"?`<span class="pill warn">Nachkaufen</span>`:`<span class="pill ok">Ausreichend</span>`}</td></tr>`}).join("")}
+    </tbody></table></div>
+    ${pf.length?`<div class="panel section"><div class="row between"><h3>Leergut &amp; Pfand</h3><span class="muted small">Aus verkauften Flaschen seit der letzten Rückgabe berechnet</span></div>
+      <ul class="list">${pf.map(p=>{const e=empties(p.id); return `<li><span class="grow"><b>${esc(p.name)}</b> <span class="muted small">· ${centsIn(p.pfand)} € je Flasche${p.crate>1?`, ${p.crate} Fl. je Kasten${p.crateP?` + ${centsIn(p.crateP)} € Kastenpfand`:""}`:""}</span></span><span class="num">${units(e,p.crate)}</span><b class="num" style="min-width:80px;text-align:right">${eur(e*p.pfand+(p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0))}</b></li>`}).join("")}</ul></div>`:""}`}
+    <div class="panel section"><div class="row between"><h3>Einkaufsliste</h3>${need.length||shop.some(i=>!i.done)?`<button class="btn" data-act="shopshare">Für WhatsApp kopieren</button>`:""}</div>
+      ${need.length?`<ul class="list">${need.map(x=>`<li><span class="pill ${stockState(x.p)==="out"?"bad":"warn"}">Automatisch</span><span class="grow"><b>${esc(x.p.name)}</b> <span class="muted">· Bestand ${x.s}, Minimum ${x.p.min||0}</span></span><span class="muted">${x.txt}</span></li>`).join("")}</ul>`:""}
+      ${shop.length?`<ul class="list">${shop.map(i=>`<li><input type="checkbox" id="sh_${i.id}" data-act="shopdone" data-id="${i.id}" ${i.done?"checked":""} ${canWrite()?"":"disabled"}><label for="sh_${i.id}" class="grow" style="${i.done?"text-decoration:line-through;color:var(--muted)":""}">${esc(i.text)}${i.done&&i.by?` <span class="small">– ${esc(i.by)}</span>`:""}</label>${canWrite()?`<button class="btn small ghost" data-act="shopdel" data-id="${i.id}">Entfernen</button>`:""}</li>`).join("")}</ul>`:""}
+      ${!need.length&&!shop.length?`<p class="muted" style="margin:0">Alles da. Artikel unter Mindestbestand erscheinen hier automatisch.</p>`:""}
+      ${canWrite()?`<form class="row" id="shopForm"><input type="text" id="shopText" placeholder="z. B. Kaffeefilter, Senf, Grillkohle" aria-label="Eintrag für die Einkaufsliste" style="flex:1;min-width:180px"><button class="btn" type="submit">Hinzufügen</button></form>`:""}
+      ${shop.some(i=>i.done)&&canWrite()?`<button class="btn small ghost" data-act="shopclear" style="align-self:flex-start">Erledigte entfernen</button>`:""}
+      <p class="muted small" style="margin:0">Automatische Einträge verschwinden, sobald der Einkauf eingebucht ist. Eigene Einträge hakt ab, wer eingekauft hat.</p>
+    </div></div>`;
+}
+function shoppingText(){
+  const need=shoppingNeed(); const shop=list("shopping").filter(i=>!i.done).sort((a,b)=>a.ts-b.ts);
+  const lines=[`Einkaufsliste Kantine${S.settings.unit?` – ${S.settings.unit}`:""} (${new Date().toLocaleDateString("de-DE")})`,""];
+  need.forEach(x=>lines.push(`- ${x.p.name}: ${x.txt}`));
+  shop.forEach(i=>lines.push(`- ${i.text}`));
+  lines.push("","Bitte nach dem Einkauf in der Kantinen-App abhaken.");
+  return lines.join("\n");
+}
+
+// ---------- Statistik ----------
+function vStats(){
+  const agg = monthAgg();
+  const now=new Date(); const months=[];
+  for (let i=11;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 15); months.push(isoLocal(d).slice(0,7)); }
+  const allP = {}; for (const ym in agg) for (const [pid,v] of Object.entries(agg[ym])) allP[pid]=S.products[pid]?.name||v.n;
+  const pid = UI.statProd && allP[UI.statProd] ? UI.statProd : "";
+  const meas = UI.statMeasure;
+  const val = ym => { const o=agg[ym]||{}; let s=0; for (const [k,v] of Object.entries(o)) if (!pid||k===pid) s += meas==="c"?v.c:v.q; return s; };
+  const vals = months.map(val);
+  const sel = months.includes(UI.statMonth) ? UI.statMonth : months[months.length-1];
+  const max = Math.max(...vals,0);
+  const nice = (()=>{ if (!max) return meas==="c"?1000:10; const m=meas==="c"?max/100:max; const p=Math.pow(10,Math.floor(Math.log10(m))); const n=[1,2,2.5,5,10].map(x=>x*p).find(x=>x>=m); return meas==="c"?n*100:n; })();
+  const lab = v => meas==="c"? eur(v).replace(",00","") : nf.format(v);
+  const top = Object.entries(agg[sel]||{}).map(([k,v])=>({k,...v,n:S.products[k]?.name||v.n})).sort((a,b)=>b.q-a.q);
+  const hasData = Object.keys(agg).length>0;
+  // Year review
+  const years=new Set([new Date().getFullYear()]); Object.keys(agg).forEach(ym=>years.add(+ym.slice(0,4))); list("ops").forEach(o=>o.date&&years.add(+o.date.slice(0,4)));
+  const Y = years.has(UI.year)?UI.year:new Date().getFullYear();
+  const yItems={}; let yRev=0, yQ=0, yL=0;
+  for (const [ym,o] of Object.entries(agg)) if (+ym.slice(0,4)===Y) for (const [k,v] of Object.entries(o)){ const e=(yItems[k]=yItems[k]||{n:S.products[k]?.name||v.n,q:0,cat:v.cat||S.products[k]?.cat||""}); e.q+=v.q; yRev+=v.c; yQ+=v.q; yL+=v.l||0; }
+  const yArr=Object.values(yItems).sort((a,b)=>b.q-a.q);
+  const catQ = c => yArr.filter(x=>x.cat===c).reduce((s,x)=>s+x.q,0);
+  const yOps=list("ops").filter(o=>o.date && +o.date.slice(0,4)===Y);
+  const yEv=list("events").filter(e=>+e.date.slice(0,4)===Y);
+  const yPers=list("signups").filter(s=>yEv.some(e=>e.id===s.e)).reduce((s,x)=>s+(x.count||1),0);
+  const yRounds=list("rounds").filter(r=>new Date(r.ts||0).getFullYear()===Y).length;
+  const coffee = yArr.filter(x=>x.cat==="Heißgetränke").reduce((s,x)=>s+x.q,0);
+  return `<div class="stack">
+    <div><div class="eyebrow">Was läuft wie gut?</div><h2>Verbrauch pro Monat</h2></div>
+    ${!hasData?`<div class="empty"><b>Noch keine Buchungen.</b><span>Sobald an der Strichliste gebucht wird, siehst du hier, welche Artikel pro Monat gehen – hilfreich für die Bestellung vor dem Sommerfest.</span></div>`:`
+    <div class="row">
+      <label class="f" style="flex:1;min-width:200px;max-width:320px">Artikel<select id="statProd"><option value="">Alle Artikel</option>${Object.entries(allP).sort((a,b)=>a[1].localeCompare(b[1],"de")).map(([k,n])=>`<option value="${k}" ${k===pid?"selected":""}>${esc(n)}</option>`).join("")}</select></label>
+      <div class="seg" role="group" aria-label="Maß" style="align-self:flex-end"><button data-act="statmeas" data-m="q" aria-pressed="${meas==="q"}">Stück</button><button data-act="statmeas" data-m="c" aria-pressed="${meas==="c"}">Umsatz</button></div>
+    </div>
+    <div class="panel"><div class="row between" style="margin-bottom:8px"><h3>${pid?esc(allP[pid]):"Alle Artikel"} · ${meas==="c"?"Umsatz":"Stück"} der letzten 12 Monate</h3><span class="muted small">Balken antippen für Details</span></div>
+      <div class="chart-wrap"><div class="chart-inner"><div class="chart" role="img" aria-label="Monatlicher Verbrauch">
+        ${[0,.5,1].map(f=>`<div class="gl" style="bottom:${28+f*184}px"><span class="num">${lab(nice*f)}</span></div>`).join("")}
+        <div class="bars">${months.map((ym,i)=>{const h=nice?vals[i]/nice*100:0; return `<button class="bcol" data-act="statmonth" data-ym="${ym}" aria-pressed="${ym===sel}" aria-label="${ymLabel(ym,true)}: ${lab(vals[i])}" style="--h:${h}%"><span class="tip num">${lab(vals[i])}</span><span class="bar" style="height:${h}%"></span><span class="bl">${ymLabel(ym)}</span></button>`}).join("")}</div>
+      </div></div></div></div>
+    <div class="panel section"><h3>${ymLabel(sel,true)}</h3>
+      ${top.length?`<div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Stück</th><th class="r">Umsatz</th><th class="r">Ø pro Woche</th></tr></thead><tbody>${top.map(x=>`<tr${x.k===pid?` style="background:var(--red-soft)"`:""}><td><b>${esc(x.n)}</b></td><td class="r num">${nf.format(x.q)}</td><td class="r num">${eur(x.c)}</td><td class="r num">${nf1.format(x.q/4.35)}</td></tr>`).join("")}</tbody></table></div>`:`<p class="muted" style="margin:0">In diesem Monat wurde nichts gebucht.</p>`}
+    </div>`}
+    <div class="row between" style="margin-top:12px"><div><div class="eyebrow">Für die Jahreshauptversammlung</div><h2>Jahresrückblick ${Y}</h2></div>
+      <label class="f" style="width:140px">Jahr<select id="yearSel">${[...years].sort((a,b)=>b-a).map(y=>`<option ${y===Y?"selected":""}>${y}</option>`).join("")}</select></label></div>
+    <div class="review">
+      <div class="fact"><b class="num">${nf.format(yL)} l</b><span>Getränke getrunken</span></div>
+      <div class="fact"><b class="num">${nf.format(coffee)}</b><span>Tassen Kaffee &amp; Tee</span></div>
+      <div class="fact"><b class="num">${nf.format(catQ("Essen"))}</b><span>Portionen Essen</span></div>
+      <div class="fact"><b class="num">${yOps.filter(o=>o.kind==="Einsatz").length} / ${yOps.filter(o=>o.kind!=="Einsatz").length}</b><span>Einsätze / Übungen &amp; Dienste verpflegt</span></div>
+      <div class="fact"><b class="num">${yRounds}</b><span>Runden ausgegeben</span></div>
+      <div class="fact"><b class="num">${yEv.length}</b><span>Termine mit ${yPers} Anmeldungen</span></div>
+      <div class="fact"><b class="num">${nf.format(yQ)}</b><span>Artikel über die Strichliste</span></div>
+      <div class="fact"><b class="num">${eur(yRev).replace(/,\d\d/,"")}</b><span>Umsatz Kantine</span></div>
+    </div>
+    ${yArr.length?`<div class="panel section"><h3>Beliebteste Artikel ${Y}</h3><ul class="list">${yArr.slice(0,5).map(x=>`<li><span class="grow"><b>${esc(x.n)}</b></span><span class="num">${nf.format(x.q)} Stück</span></li>`).join("")}</ul>
+      <p class="muted small" style="margin:0">Bewusst ohne Ranglisten pro Person. Liter zählen nur Artikel mit hinterlegter Füllmenge.</p></div>`:""}
+  </div>`;
+}
+
+// ---------- Verwaltung ----------
+function vAdmin(){
+  if (!S.canEdit) return `<div class="empty"><b>Nur für den Kassenwart.</b><span>Die Verwaltung ist nur mit einem freigeschalteten Zugang sichtbar.</span></div>`;
+  if (!adminOpen()) return `<div class="stack" style="max-width:360px;margin:0 auto;text-align:center"><h2>Verwaltung gesperrt</h2><p class="muted" style="margin:0">PIN des Kassenwarts eingeben.</p>
+    <div class="pindots" id="pinDots">${[0,1,2,3,4,5].map(()=>"<i></i>").join("")}</div>
+    <div class="pinpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="pin" data-k="${n}">${n}</button>`).join("")}<button data-act="pin" data-k="c" aria-label="Löschen">⌫</button><button data-act="pin" data-k="0">0</button><button data-act="pin" data-k="ok" style="background:var(--red);color:var(--red-ink);border-color:var(--red)">OK</button></div></div>`;
+  const tabs=[["konten","Konten"],["ae","Abzugsliste"],["einsaetze","Einsatzverpflegung"],["kasse","Kassenbuch"],["stamm","Stammdaten"],["abschluss","Abschluss & Einstellungen"]];
+  const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, abschluss:aClose}[UI.adminTab]||aKonten)();
+  return `<div class="stack">
+    <div class="row between"><div><div class="eyebrow">Kassenwart</div><h2>Verwaltung</h2></div>${S.settings.pinHash?`<button class="btn" data-act="lock">Sperren</button>`:""}</div>
+    ${!S.settings.pinHash?`<div class="note">Noch keine PIN gesetzt: Am Kantinen-Tablet kann jeder die Verwaltung öffnen. Unter „Abschluss &amp; Einstellungen“ eine PIN festlegen.</div>`:""}
+    <div class="seg" role="tablist">${tabs.map(([k,l])=>`<button data-act="atab" data-tab="${k}" aria-pressed="${UI.adminTab===k}">${l}</button>`).join("")}</div>
+    ${body}</div>`;
+}
+function aKonten(){
+  let rows = membersActive().map(m=>({...m, bal:balance(m.id), last:lastActivity(m.id)}));
+  const sumPos = rows.filter(r=>r.bal>0).reduce((s,r)=>s+r.bal,0), sumNeg = rows.filter(r=>r.bal<0).reduce((s,r)=>s+r.bal,0);
+  if (UI.debtOnly) rows = rows.filter(r=>r.bal<0);
+  rows.sort((a,b)=>a.bal-b.bal);
+  return `<div class="kpis"><div class="kpi"><span class="eyebrow">Offen zur Verrechnung</span><b class="num neg">${eur(-sumNeg)}</b><span class="hint">Abzug bei der nächsten Aufwandsentschädigung</span></div>
+      <div class="kpi"><span class="eyebrow">Guthaben gesamt</span><b class="num pos">${eur(sumPos)}</b></div>
+      <div class="kpi"><span class="eyebrow">Kassenstand</span><b class="num">${eur(cashBalance())}</b><span class="hint">laut Kassenbuch</span></div></div>
+    <section class="section"><div class="row between"><h3>Konten</h3><div class="row">
+      <label class="row" style="gap:6px;font-weight:600"><input type="checkbox" id="debtOnly" ${UI.debtOnly?"checked":""}> Nur offene</label>
+      <button class="btn" data-act="pay">Einzahlung erfassen</button><button class="btn" data-act="csv">Kontenliste exportieren</button></div></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Name</th><th class="r">Kontostand</th><th>Letzte Buchung</th><th></th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td class="r num"><b class="${r.bal<0?"neg":r.bal>0?"pos":""}">${eur(r.bal)}</b></td><td class="muted">${r.last?tsStr(r.last):"–"}</td><td class="r"><button class="btn small" data-act="pay" data-id="${r.id}">${r.bal<0?"Ausgleichen":"Einzahlung"}</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">${UI.debtOnly?"Niemand hat offene Beträge.":"Noch keine Mitglieder."}</td></tr>`}
+      </tbody></table></div></section>`;
+}
+function aOps(){
+  const all = list("ops"); const years=new Set([new Date().getFullYear()]); all.forEach(o=>o.date&&years.add(+o.date.slice(0,4)));
+  const Y = years.has(UI.opYear)?UI.opYear:new Date().getFullYear();
+  const ops = all.filter(o=>o.date && +o.date.slice(0,4)===Y).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0));
+  const tot = ops.map(o=>({o,...opTotals(o.id)}));
+  const open = tot.filter(x=>!x.o.settled).reduce((s,x)=>s+x.total,0), sum = tot.reduce((s,x)=>s+x.total,0);
+  return `<div class="kpis"><div class="kpi"><span class="eyebrow">Noch nicht mit Gemeinde abgerechnet</span><b class="num">${eur(open)}</b></div>
+      <div class="kpi"><span class="eyebrow">Verpflegung ${Y} gesamt</span><b class="num">${eur(sum)}</b></div>
+      <div class="kpi"><span class="eyebrow">Einsätze / Übungen</span><b class="num">${ops.filter(o=>o.kind==="Einsatz").length} / ${ops.filter(o=>o.kind!=="Einsatz").length}</b></div></div>
+    <div class="row between"><label class="f" style="width:140px">Jahr<select id="opYear">${[...years].sort((a,b)=>b-a).map(y=>`<option ${y===Y?"selected":""}>${y}</option>`).join("")}</select></label>
+      <div class="row" style="align-self:flex-end"><button class="btn" data-act="opcsv" data-y="${Y}">Abrechnung ${Y} exportieren</button><button class="btn primary" data-act="opnew">Einsatz anlegen</button></div></div>
+    ${tot.length?tot.map(({o,items,total})=>`<div class="panel section"><div class="row between"><div><span class="pill op">${esc(o.kind||"Einsatz")}</span> <span class="muted">${dDate(o.date)}</span><h3 style="margin-top:4px">${esc(o.title)}</h3></div>
+      <div class="row"><b class="num" style="font-size:1.3rem">${eur(total)}</b>${o.open?`<span class="pill warn">Läuft</span>`:o.settled?`<span class="pill ok">Abgerechnet</span>`:`<span class="pill neutral">Offen ggü. Gemeinde</span>`}</div></div>
+      ${Object.keys(items).length?`<div class="chips">${Object.entries(items).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`<span class="chip">${q}× ${esc(n)}</span>`).join("")}</div>`:`<p class="muted" style="margin:0">Noch nichts gebucht.</p>`}
+      <div class="row">${o.open?`<button class="btn small" data-act="opend" data-id="${o.id}">Verpflegung beenden</button>`:`<button class="btn small" data-act="opsettle" data-id="${o.id}">${o.settled?"Abrechnung zurücknehmen":"Mit Gemeinde abgerechnet"}</button><button class="btn small ghost" data-act="opreopen" data-id="${o.id}">Wieder öffnen</button>`}
+        <button class="btn small ghost" data-act="opedit" data-id="${o.id}">Bearbeiten</button></div></div>`).join("")
+    :`<div class="empty"><b>Keine Einsatzverpflegung in ${Y}.</b><span>Nach einem Einsatz oder einer Übung tippt jemand an der Strichliste auf „Einsatz oder Übung verpflegen“. Alles, was dann gebucht wird, geht auf die Wehr statt auf das Mitglied und landet hier für die Abrechnung mit der Gemeinde.</span></div>`}`;
+}
+// ---------- Aufwandsentschädigung (Abzugsliste für die Kassiererin) ----------
+function aeDefaultLabel(){ const d=new Date(); return `${Math.floor(d.getMonth()/3)+1}. Quartal ${d.getFullYear()}`; }
+function aAE(){
+  const debt = membersActive().map(m=>({m,bal:balance(m.id)})).filter(x=>x.bal<0);
+  const sumDebt = -debt.reduce((s,x)=>s+x.bal,0);
+  const sets = list("settlements").sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.ts||0)-(a.ts||0));
+  const last = sets[0];
+  return `<div class="panel stack"><p style="margin:0">Die Kassiererin zahlt die Aufwandsentschädigung quartalsweise bar aus und zieht dabei ab, was in der Kantine angeschrieben wurde. Die Kantine kennt die Höhe der Aufwandsentschädigung nicht: Sie gibt der Kassiererin nur die Abzugsliste – wer wie viel für die Kantine abgezogen bekommt. Nach der Auszahlung buchst du die Liste hier, und die Konten stehen wieder auf null.</p>
+      <div class="kpis"><div class="kpi"><span class="eyebrow">Offen für die Abzugsliste</span><b class="num neg">${eur(sumDebt)}</b><span class="hint">${debt.length} ${debt.length===1?"Kamerad":"Kameraden"}</span></div>
+        <div class="kpi"><span class="eyebrow">Letzte Abzugsliste</span><b class="num">${last?eur(last.total||0):"–"}</b><span class="hint">${last?`${esc(last.label)} · ${dDate(last.date)}`:"noch keine"}</span></div></div>
+      <div class="row"><button class="btn primary" data-act="aeprep" ${debt.length?"":"disabled"}>Abzugsliste erstellen</button></div></div>
+    <section class="section"><h3>Bisherige Abzugslisten</h3>
+      ${sets.length?`<div class="tbl-wrap"><table><thead><tr><th>Quartal</th><th>Stichtag</th><th class="r">Kameraden</th><th class="r">Abgezogen</th><th></th></tr></thead><tbody>
+      ${sets.map(s=>`<tr><td><b>${esc(s.label)}</b></td><td class="num">${dDate(s.date)}</td><td class="r num">${(s.rows||[]).filter(r=>r.deduct>0).length}</td><td class="r num">${eur(s.total||0)}</td><td class="r"><button class="btn small" data-act="aeshow" data-id="${s.id}">Ansehen</button></td></tr>`).join("")}
+      </tbody></table></div>`:`<div class="empty"><b>Noch keine Abzugsliste.</b><span>Vor der nächsten Auszahlung erstellst du hier die Liste für die Kassiererin.</span></div>`}</section>`;
+}
+function aeText(label, rows){
+  const r=rows.filter(x=>x.deduct>0);
+  return [`Kantine${S.settings.unit?` ${S.settings.unit}`:""} – Abzug von der Aufwandsentschädigung, ${label}`,"",
+    ...r.map(x=>`${x.name}: ${eur(x.deduct)}`),"",`Summe: ${eur(r.reduce((s,x)=>s+x.deduct,0))} (${r.length} Kameraden)`].join("\n");
+}
+const aeCsv = rows => csv(["Name","Abzug Kantine EUR"], rows.filter(x=>x.deduct>0).map(x=>[x.name, centsIn(x.deduct)]));
+function aeTable(rows, editable){
+  return `<div class="tbl-wrap"><table style="min-width:420px"><thead><tr><th>Name</th><th class="r">Angeschrieben</th><th class="r">Abzug Kantine</th></tr></thead><tbody>
+    ${rows.map((r,i)=>`<tr><td><b>${esc(r.name)}</b>${r.open-r.deduct>0?`<br><span class="small neg">${eur(r.open-r.deduct)} bleibt offen</span>`:""}</td><td class="r num">${eur(r.open)}</td>
+      <td class="r">${editable?`<input type="text" inputmode="decimal" data-i="${i}" value="${centsIn(r.deduct)}" aria-label="Abzug ${esc(r.name)}">`:`<b class="num">${eur(r.deduct)}</b>`}</td></tr>`).join("")}
+    </tbody><tfoot><tr><td>Summe</td><td class="r num">${eur(rows.reduce((s,r)=>s+r.open,0))}</td><td class="r num">${eur(rows.reduce((s,r)=>s+r.deduct,0))}</td></tr></tfoot></table></div>`;
+}
+function aePrep(){
+  const rows = membersActive().map(m=>({m:m.id, name:m.name, open:Math.max(0,-balance(m.id))})).filter(r=>r.open>0).map(r=>({...r,deduct:r.open}));
+  let confirmStep=false;
+  modal(`<h3>Abzugsliste für die Kassiererin</h3>
+    <p class="muted" style="margin:0">Enthält nur, wer etwas angeschrieben hat, und nur den Abzug für die Kantine. Konnte bei jemandem nicht alles abgezogen werden, trägst du den tatsächlichen Abzug ein – der Rest bleibt auf dem Konto offen.</p>
+    <div class="grid2"><label class="f">Quartal<input type="text" id="aeLabel" maxlength="60" value="${esc(aeDefaultLabel())}"></label><label class="f">Stichtag<input type="date" id="aeDate" value="${today()}"></label></div>
+    <div id="aeTbl">${aeTable(rows,true)}</div>
+    <div class="row"><button class="btn" id="aeCopy">Liste als Text kopieren</button><button class="btn" id="aeExport">Als Datei exportieren</button></div>
+    <label class="row" style="font-weight:600"><input type="checkbox" id="aeCash"> Die Kassiererin übergibt die Summe bar an die Kantine – als Einnahme ins Kassenbuch</label>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="aeBook">Nach Auszahlung buchen</button></div>`, r=>{
+    const box=r.querySelector("#aeTbl");
+    const syncAll=()=>{ box.querySelectorAll("input[data-i]").forEach(el=>{ const x=rows[el.dataset.i]; const v=parseEur(el.value); x.deduct = isNaN(v)?x.deduct:Math.min(x.open,Math.max(0,v)); }); box.innerHTML=aeTable(rows,true); };
+    box.addEventListener("change", syncAll);
+    const label=()=>r.querySelector("#aeLabel").value.trim()||aeDefaultLabel();
+    r.querySelector("#aeCopy").onclick=()=>{ syncAll(); copyText(aeText(label(),rows),"Abzugsliste kopieren"); };
+    r.querySelector("#aeExport").onclick=()=>{ syncAll(); saveFile(`Kantine-Abzug-${label()}.csv`, aeCsv(rows)); };
+    r.querySelector("#aeBook").onclick=async()=>{
+      const btn=r.querySelector("#aeBook");
+      if (!confirmStep){ syncAll(); }
+      const total=rows.reduce((s,x)=>s+x.deduct,0); const n=rows.filter(x=>x.deduct>0).length;
+      if (!total){ toast("Die Liste enthält keinen Abzug."); return; }
+      if (!confirmStep){ confirmStep=true; btn.textContent=`${eur(total)} bei ${n} Kameraden als verrechnet buchen – bestätigen`; btn.classList.add("danger"); btn.classList.remove("primary"); return; }
+      btn.disabled=true;
+      const lb=label(), date=r.querySelector("#aeDate").value||today(), cash=r.querySelector("#aeCash").checked;
+      const ok=await w(async db=>{ const now=Date.now();
+        for (const x of rows) if (x.deduct>0) await db.collection("payments").doc().set({m:x.m, amount:x.deduct, note:`Abzug Aufwandsentschädigung ${lb}`, ts:now});
+        await db.collection("settlements").doc().set({label:lb, date, ts:now, total, rows:rows.filter(x=>x.deduct>0).map(x=>({m:x.m,name:x.name,open:x.open,deduct:x.deduct}))});
+        if (cash) await db.collection("cash").doc().set({date, type:"in", amount:total, text:`Übergabe Kassiererin, Abzug Aufwandsentschädigung ${lb}`, cat:"Einzahlung Mitglied", receipt:"", ts:now});
+      }, `${eur(total)} als verrechnet gebucht`);
+      if (ok) closeModal(); else btn.disabled=false;
+    };
+  }, true);
+}
+function aeShow(id){
+  const s=S.settlements[id]; if(!s) return;
+  const rows=s.rows||[];
+  modal(`<h3>Abzugsliste ${esc(s.label)}</h3><p class="muted" style="margin:0">Stichtag ${dDate(s.date)} · ${eur(s.total||0)}</p>${aeTable(rows,false)}
+    <div class="actions"><button class="btn" id="aeC">Als Text kopieren</button><button class="btn" id="aeX">Als Datei exportieren</button><button class="btn primary" data-close>Schließen</button></div>`, r=>{
+    r.querySelector("#aeC").onclick=()=>copyText(aeText(s.label,rows),"Abzugsliste kopieren");
+    r.querySelector("#aeX").onclick=()=>saveFile(`Kantine-Abzug-${s.label}.csv`, aeCsv(rows));
+  }, true);
+}
+
+function cashSorted(){ return list("cash").sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.ts||0)-(b.ts||0)); }
+function cashBalance(){ return (S.settings.cashStart||0) + cashSorted().reduce((s,c)=>s+(c.type==="out"?-c.amount:c.amount),0); }
+function aKasse(){
+  const all=cashSorted(); const years=new Set([new Date().getFullYear()]); all.forEach(c=>c.date&&years.add(+c.date.slice(0,4)));
+  const Y = years.has(UI.cashYear)?UI.cashYear:new Date().getFullYear();
+  let run=S.settings.cashStart||0; const rows=[];
+  for (const c of all){ run += c.type==="out"?-c.amount:c.amount; if (+String(c.date).slice(0,4)===Y) rows.push({...c,run}); }
+  const yin=rows.filter(r=>r.type!=="out").reduce((s,r)=>s+r.amount,0), yout=rows.filter(r=>r.type==="out").reduce((s,r)=>s+r.amount,0);
+  const startY = rows.length ? rows[0].run - (rows[0].type==="out"?-rows[0].amount:rows[0].amount) : null;
+  const missing = rows.filter(r=>r.type==="out" && !r.receipt).length;
+  return `<div class="kpis"><div class="kpi"><span class="eyebrow">Kassenstand jetzt</span><b class="num">${eur(cashBalance())}</b></div>
+      <div class="kpi"><span class="eyebrow">Einnahmen ${Y}</span><b class="num pos">${eur(yin)}</b></div>
+      <div class="kpi"><span class="eyebrow">Ausgaben ${Y}</span><b class="num neg">${eur(yout)}</b></div>
+      <div class="kpi"><span class="eyebrow">Ausgaben ohne Beleg</span><b class="num ${missing?"neg":""}">${missing}</b><span class="hint">für die Kassenprüfung nachreichen</span></div></div>
+    <div class="row between"><label class="f" style="width:140px">Jahr<select id="cashYear">${[...years].sort((a,b)=>b-a).map(y=>`<option ${y===Y?"selected":""}>${y}</option>`).join("")}</select></label>
+      <div class="row" style="align-self:flex-end"><button class="btn" data-act="cashstart">Anfangsbestand</button><button class="btn" data-act="cashcsv" data-y="${Y}">Kassenbuch ${Y} exportieren</button><button class="btn primary" data-act="cashnew">Eintrag erfassen</button></div></div>
+    ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Datum</th><th>Buchungstext</th><th>Kategorie</th><th class="r">Einnahme</th><th class="r">Ausgabe</th><th class="r">Bestand</th><th>Beleg</th><th></th></tr></thead><tbody>
+      ${startY!=null?`<tr><td class="muted">–</td><td class="muted" colspan="4">Übertrag</td><td class="r num">${eur(startY)}</td><td></td><td></td></tr>`:""}
+      ${rows.map(r=>`<tr><td class="num">${dDate(r.date)}</td><td>${esc(r.text)}</td><td class="muted">${esc(r.cat||"")}</td><td class="r num pos">${r.type!=="out"?eur(r.amount):""}</td><td class="r num neg">${r.type==="out"?eur(r.amount):""}</td><td class="r num"><b>${eur(r.run)}</b></td>
+        <td>${r.receipt?`<button class="btn small" data-act="receipt" data-id="${r.id}">Ansehen</button>`:r.type==="out"?`<span class="pill warn">Fehlt</span>`:""}</td><td class="r"><button class="btn small ghost" data-act="cashedit" data-id="${r.id}">Bearbeiten</button></td></tr>`).join("")}
+    </tbody></table></div>`:`<div class="empty"><b>Keine Kassenbuchungen in ${Y}.</b><span>Bareinzahlungen der Mitglieder und eingebuchte Einkäufe mit Betrag landen automatisch hier. Alles andere – Pfandgeld, Spenden, Kleinkram – erfasst du mit „Eintrag erfassen“, am besten gleich mit Foto vom Kassenbon.</span></div>`}
+    <p class="muted small" style="margin:0">${S.settings.cashStart!=null?`Anfangsbestand ${eur(S.settings.cashStart||0)}${S.settings.cashStartDate?` am ${dDate(S.settings.cashStartDate)}`:""}. `:""}Kassenbucheinträge bleiben beim Abschluss erhalten.</p>`;
+}
+function aStamm(){
+  const ms = list("members").sort((a,b)=>((a.active===false)-(b.active===false))||byName(a,b));
+  const ps = list("products").sort((a,b)=>((a.active===false)-(b.active===false))||(CATS.indexOf(a.cat)-CATS.indexOf(b.cat))||byName(a,b));
+  return `<section class="section"><div class="row between"><h3>Mitglieder</h3><div class="row">${ms.length?`<button class="btn" data-act="qrall">QR-Zettel für alle drucken</button>`:""}<button class="btn primary" data-act="mnew">Mitglieder hinzufügen</button></div></div>
+      <p class="muted small" style="margin:0">Jeder Kamerad bekommt einen persönlichen QR-Code. Damit sieht er am Handy nur seinen eigenen Kontostand, seine Buchungen und die nächsten Termine – ohne Anmeldung.</p>
+      ${ms.length?`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Status</th><th></th></tr></thead><tbody>${ms.map(m=>`<tr><td><b>${esc(m.name)}</b></td><td>${m.active===false?`<span class="pill neutral">Ausgeblendet</span>`:`<span class="pill ok">Aktiv</span>`}</td><td class="r"><button class="btn small" data-act="qr" data-id="${m.id}">${S.codes[m.id]?"QR-Code":"QR-Code erzeugen"}</button> <button class="btn small" data-act="medit" data-id="${m.id}">Bearbeiten</button></td></tr>`).join("")}</tbody></table></div>`
+      :`<div class="empty"><b>Noch keine Mitglieder.</b><span>Füge alle Kameradinnen und Kameraden auf einmal ein, ein Name pro Zeile.</span></div>`}</section>
+    <section class="section"><div class="row between"><h3>Sortiment &amp; Preise</h3><div class="row">${!ps.length?`<button class="btn" data-act="sample">Beispiel-Sortiment anlegen</button>`:""}<button class="btn primary" data-act="pnew">Artikel anlegen</button></div></div>
+      ${ps.length?`<div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Preis</th><th class="r">Füllmenge</th><th class="r">Pfand</th><th class="r">Bestand</th><th>Status</th><th></th></tr></thead><tbody>${ps.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="muted small">${esc(p.cat||"")}</span></td><td class="r num">${eur(p.price)}</td><td class="r num">${p.ml?`${nf.format(p.ml)} ml`:"–"}</td><td class="r num">${p.pfand?`${centsIn(p.pfand)} €${p.crate>1?` · ${p.crate}er`:""}`:"–"}</td><td class="r num">${p.track===false?"–":units(stock(p.id),p.crate)}</td><td>${p.active===false?`<span class="pill neutral">Ausgeblendet</span>`:`<span class="pill ok">Im Verkauf</span>`}</td><td class="r"><button class="btn small" data-act="pedit" data-id="${p.id}">Bearbeiten</button></td></tr>`).join("")}</tbody></table></div>`
+      :`<div class="empty"><b>Noch kein Sortiment.</b><span>Lege Artikel einzeln an oder starte mit einem Beispiel-Sortiment (Wasser, Spezi, Bier, Kaffee, Bratwurst …) und passe Preise, Pfand und Bestand an.</span></div>`}</section>`;
+}
+function aClose(){
+  const nB = Object.keys(S.bookings).length + Object.keys(S.payments).length;
+  return `<section class="section"><h3>Abschluss</h3>
+      <div class="panel stack"><p style="margin:0">Der Abschluss fasst alle Buchungen und Einzahlungen bis jetzt pro Person zu einem Übertrag zusammen. Kontostände, Bestände, Leergut, Einsatzverpflegung und Statistik bleiben erhalten, die Einzelbuchungen werden gelöscht. Empfohlen einmal im Monat oder Quartal – vorher die Buchungen exportieren.</p>
+      <p class="muted" style="margin:0">Aktuell ${nB} Einzelbuchungen seit dem letzten Abschluss.</p>
+      <div class="row"><button class="btn" data-act="csvtx">Alle Buchungen exportieren</button><button class="btn danger" data-act="close" ${nB?"":"disabled"}>Abschluss durchführen</button></div></div></section>
+    <section class="section"><h3>Datensicherung</h3>
+      <div class="panel stack"><p style="margin:0">Lade regelmäßig – z. B. nach jedem Abschluss – eine komplette Sicherung herunter und bewahre sie auf einem USB-Stick oder im Vereins-Laufwerk auf. Die Datei enthält alle Kantinendaten und die persönlichen Codes; bitte vertraulich behandeln.</p>
+      <div class="row"><button class="btn" data-act="backup">Sicherung herunterladen</button>${canWrite()?`<label class="btn" for="restoreFile">Sicherung wiederherstellen …</label><input type="file" id="restoreFile" accept="application/json,.json" hidden>`:""}</div>
+      ${S.settings.lastBackup?`<p class="muted small" style="margin:0">Letzte Sicherung: ${tsStr(S.settings.lastBackup)}</p>`:`<p class="muted small" style="margin:0">Noch keine Sicherung heruntergeladen.</p>`}</div></section>
+    <section class="section"><h3>Einstellungen</h3>
+      <form class="panel grid2" id="setForm"><label class="f">Name der Wehr<input type="text" id="setUnit" value="${esc(S.settings.unit||"")}" placeholder="z. B. FF Musterdorf"></label>
+      <label class="f">Admin-PIN<input type="password" id="setPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.pinHash?"Gesetzt – neue eingeben zum Ändern":"4 bis 6 Ziffern"}"><span class="hint">Sperrt die Verwaltung am gemeinsamen Tablet.</span></label>
+      <label class="f">Team-PIN<input type="password" id="setTPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.teamPinHash?"Gesetzt – neue eingeben zum Ändern":"optional, 4 bis 6 Ziffern"}"><span class="hint">Für Kantinenteam und HBM. Sperrt die App nach 10 Minuten ohne Bedienung.</span></label>
+      <div class="row" style="align-self:end"><button class="btn primary" type="submit">Speichern</button>${S.settings.pinHash?`<button class="btn" type="button" data-act="pinrm">Admin-PIN entfernen</button>`:""}${S.settings.teamPinHash?`<button class="btn" type="button" data-act="tpinrm">Team-PIN entfernen</button>`:""}</div></form></section>
+    <section class="section"><h3>Geräte &amp; Sicherheit</h3>
+      <div class="panel stack"><div class="row between"><span>Dieses Gerät: <b>${esc(S.email||"")}</b></span><span class="muted small">${esc(syncLabel())}</span></div>
+      <div class="row"><button class="btn" data-act="syncnow">Jetzt abgleichen</button><button class="btn" data-act="pwchange">Kantinen-Passwort ändern</button><button class="btn danger" data-act="logout">Gerät abmelden</button></div>
+      <p class="muted small" style="margin:0">Weiteres Gerät, z. B. der PC zu Hause: Adresse der Kantine öffnen, Zugangsschlüssel und Kantinen-Passwort eingeben. Ein verlorenes Gerät sperrst du, indem du in GitHub einen neuen Zugangsschlüssel erzeugst und den alten löschst (siehe Anleitung).</p></div></section>`;
+}
+
+// ================= Actions =================
+let pinBuf="", tpinBuf="";
+async function bookCart(){
+  const t=target(UI.sel); if(!t) return;
+  const cart=cartOf(t.key);
+  const lines = Object.entries(cart).filter(([pid,q])=>q>0 && S.products[pid]);
+  if (!lines.length) return;
+  const ts=Date.now(); const ids=[];
+  const base = {...(t.t==="m"?{m:t.id} : t.t==="o"?{o:t.id} : {m:t.r.payer, r:t.id}), by:S.email||""};
+  const ok = await w(async db=>{
+    for (const [pid,q] of lines){ const p=S.products[pid]; const ref=db.collection("bookings").doc(); ids.push(ref.id);
+      await ref.set({...base,p:pid,n:p.name,price:p.price,qty:q,ts}); }
+  });
+  if (!ok) return;
+  const total = lines.reduce((s,[pid,q])=>s+S.products[pid].price*q,0);
+  const who = t.t==="m"?t.label : t.t==="o"?t.label : `die Runde von ${mName(t.r.payer)}`;
+  setCart(t.key,{});
+  if (t.t==="m"){ UI.sel=null; UI.search=""; }
+  render(); window.scrollTo({top:0});
+  toast(`${lines.map(([pid,q])=>`${q}× ${S.products[pid].name}`).join(", ")} für ${who} gebucht · ${eur(total)}`, {label:"Rückgängig", fn: async()=>{
+    await w(async db=>{ for (const id of ids) await db.doc("bookings/"+id).delete(); }, "Buchung zurückgenommen");
+  }});
+}
+
+function opForm(id){
+  const o = id? S.ops[id] : {kind:"Einsatz", title:"", date:today()};
+  modal(`<h3>${id?"Einsatz bearbeiten":"Einsatz oder Übung verpflegen"}</h3>
+    <p class="muted" style="margin:0">${id?"":"Alles, was danach gebucht wird, geht auf die Wehr und wird später mit der Gemeinde abgerechnet."}</p>
+    <div class="grid2"><label class="f">Art<select id="oKind">${OPKINDS.map(k=>`<option ${k===o.kind?"selected":""}>${k}</option>`).join("")}</select></label>
+    <label class="f">Datum<input type="date" id="oDate" value="${esc(o.date)}"></label></div>
+    <label class="f">Stichwort<input type="text" id="oTitle" value="${esc(o.title)}" maxlength="80" placeholder="z. B. B3 Scheunenbrand Hauptstraße, Atemschutzübung"></label>
+    <div class="actions">${id&&!Object.values(S.bookings).some(b=>b.o===id)&&!o.carry?`<button class="btn danger" id="oDel" style="margin-right:auto">Löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="oSave">${id?"Speichern":"Starten"}</button></div>`, r=>{
+    r.querySelector("#oSave").onclick = async ()=>{
+      const data={kind:r.querySelector("#oKind").value, date:r.querySelector("#oDate").value||today(), title:r.querySelector("#oTitle").value.trim().slice(0,80)};
+      if (!data.title){ toast("Bitte ein Stichwort eingeben."); return; }
+      if (id){ if (await w(db=>db.doc("ops/"+id).update(data),"Gespeichert")) closeModal(); return; }
+      const ref=S.db.collection("ops").doc();
+      if (await w(()=>ref.set({...data,open:true,settled:false,ts:Date.now(),by:S.email||""}), `${data.kind} „${data.title}“ gestartet`)){ closeModal(); if (UI.view==="kiosk"){ UI.sel="o:"+ref.id; } render(); }
+    };
+    const del=r.querySelector("#oDel"); if (del) del.onclick=async()=>{ if (await w(db=>db.doc("ops/"+id).delete(),"Gelöscht")) closeModal(); };
+  });
+}
+function roundForm(){
+  const ms=membersActive();
+  modal(`<h3>Runde ausgeben</h3><p class="muted" style="margin:0">Alle bedienen sich, am Ende geht alles auf eine Person.</p>
+    <label class="f">Wer gibt aus?<select id="rPayer"><option value="">Bitte wählen</option>${ms.map(m=>`<option value="${m.id}" ${m.id===UI.meId?"selected":""}>${esc(m.name)}</option>`).join("")}</select></label>
+    <label class="f">Anlass<input type="text" id="rReason" maxlength="60" placeholder="z. B. Geburtstag, Beförderung zum Oberfeuerwehrmann"></label>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="rSave">Runde starten</button></div>`, r=>{
+    r.querySelector("#rSave").onclick = async ()=>{
+      const payer=r.querySelector("#rPayer").value; if(!payer){ toast("Bitte auswählen, wer ausgibt."); return; }
+      const ref=S.db.collection("rounds").doc();
+      if (await w(()=>ref.set({payer, reason:r.querySelector("#rReason").value.trim(), open:true, ts:Date.now(), by:S.email||""}), `Runde von ${mName(payer)} läuft`)){ closeModal(); UI.sel="r:"+ref.id; render(); }
+    };
+  });
+}
+
+function memberForm(id){
+  const m = id? S.members[id] : null;
+  if (!m){
+    modal(`<h3>Mitglieder hinzufügen</h3><label class="f">Namen, einer pro Zeile<textarea id="mNames" rows="8" placeholder="Anna Becker&#10;Jonas Weber&#10;…"></textarea><span class="hint">So, wie ihr euch im Gerätehaus nennt.</span></label>
+      <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="mSave">Hinzufügen</button></div>`, r=>{
+      r.querySelector("#mSave").onclick = async ()=>{
+        const names=[...new Set(r.querySelector("#mNames").value.split(/\n/).map(s=>s.trim()).filter(Boolean))];
+        const existing = new Set(Object.values(S.members).map(m=>m.name.toLowerCase()));
+        const add = names.filter(n=>!existing.has(n.toLowerCase()));
+        if (!add.length){ toast(names.length?"Diese Namen gibt es schon.":"Bitte mindestens einen Namen eingeben."); return; }
+        r.querySelector("#mSave").disabled=true;
+        if (await w(async db=>{ for (const n of add) await db.collection("members").doc().set({name:n.slice(0,60),active:true,carry:0,createdAt:Date.now()}); }, `${add.length} ${add.length===1?"Mitglied":"Mitglieder"} hinzugefügt`)) closeModal();
+        else r.querySelector("#mSave").disabled=false;
+      };
+    });
+    return;
+  }
+  const bal = balance(id);
+  modal(`<h3>${esc(m.name)}</h3><label class="f">Name<input type="text" id="mName" value="${esc(m.name)}" maxlength="60"></label>
+    <label class="row" style="font-weight:600"><input type="checkbox" id="mActive" ${m.active!==false?"checked":""}> In der Strichliste anzeigen</label>
+    <p class="muted" style="margin:0">Kontostand: <b class="num">${eur(bal)}</b>. Ausgeblendete Mitglieder behalten ihr Konto.</p>
+    <div class="actions">${bal===0?`<button class="btn danger" id="mDel" style="margin-right:auto">Löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="mSave">Speichern</button></div>`, r=>{
+    r.querySelector("#mSave").onclick = async ()=>{
+      const name=r.querySelector("#mName").value.trim(); if(!name){ toast("Bitte einen Namen eingeben."); return; }
+      if (await w(db=>db.doc("members/"+id).update({name:name.slice(0,60),active:r.querySelector("#mActive").checked}),"Gespeichert")) closeModal();
+    };
+    const del=r.querySelector("#mDel"); if(del) del.onclick=async()=>{ if (await w(db=>db.doc("members/"+id).delete(),`${m.name} gelöscht`)) closeModal(); };
+  });
+}
+
+function productForm(id){
+  const p = id? S.products[id] : {name:"",price:0,cat:"Getränke",min:6,track:true,active:true,ml:0,pfand:0,crate:0,crateP:0,mhd:""};
+  modal(`<h3>${id?"Artikel bearbeiten":"Neuer Artikel"}</h3>
+    <label class="f">Bezeichnung<input type="text" id="pName" value="${esc(p.name)}" maxlength="40" placeholder="z. B. Spezi 0,5 l"></label>
+    <div class="grid2"><label class="f">Preis in €<input type="text" id="pPrice" inputmode="decimal" value="${p.price?centsIn(p.price):""}" placeholder="1,50"></label>
+    <label class="f">Kategorie<select id="pCat">${CATS.map(c=>`<option ${c===p.cat?"selected":""}>${c}</option>`).join("")}</select></label>
+    <label class="f">Füllmenge in ml<input type="number" id="pMl" min="0" step="10" value="${p.ml||""}" placeholder="500"><span class="hint">Für die Liter im Jahresrückblick.</span></label></div>
+    <label class="row" style="font-weight:600"><input type="checkbox" id="pTrack" ${p.track!==false?"checked":""}> Bestand zählen</label>
+    <div class="grid2">${id?"":`<label class="f">Aktueller Bestand (Stück)<input type="number" id="pStock" min="0" step="1" value="0"></label>`}
+    <label class="f">Mindestbestand<input type="number" id="pMin" min="0" step="1" value="${p.min||0}"><span class="hint">Darunter auf die Einkaufsliste.</span></label>
+    <label class="f">MHD (nächstes)<input type="date" id="pMhd" value="${esc(p.mhd||"")}"></label></div>
+    <div class="eyebrow">Pfand &amp; Kasten</div>
+    <div class="grid2"><label class="f">Pfand je Flasche in €<input type="text" id="pPfand" inputmode="decimal" value="${p.pfand?centsIn(p.pfand):""}" placeholder="0,08 oder 0,15"></label>
+    <label class="f">Flaschen je Kasten<input type="number" id="pCrate" min="0" step="1" value="${p.crate||""}" placeholder="20"></label>
+    <label class="f">Kastenpfand in €<input type="text" id="pCrateP" inputmode="decimal" value="${p.crateP?centsIn(p.crateP):""}" placeholder="1,50"></label></div>
+    ${id?`<label class="row" style="font-weight:600"><input type="checkbox" id="pActive" ${p.active!==false?"checked":""}> Im Verkauf</label>
+    <p class="muted small" style="margin:0">Preisänderungen gelten für neue Buchungen. Bestand korrigierst du im Lager über Inventur.</p>`:""}
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="pSave">Speichern</button></div>`, r=>{
+    r.querySelector("#pSave").onclick = async ()=>{
+      const v=s=>r.querySelector(s).value;
+      const name=v("#pName").trim(), price=parseEur(v("#pPrice"));
+      if (!name){ toast("Bitte eine Bezeichnung eingeben."); return; }
+      if (!(price>=0)){ toast("Preis bitte als Zahl eingeben, z. B. 1,50."); return; }
+      const pf=v("#pPfand").trim()?parseEur(v("#pPfand")):0, cp=v("#pCrateP").trim()?parseEur(v("#pCrateP")):0;
+      if (!(pf>=0)||!(cp>=0)){ toast("Pfand bitte als Betrag eingeben, z. B. 0,08."); return; }
+      const data={name, price, cat:v("#pCat"), min:Math.max(0,parseInt(v("#pMin"))||0), track:r.querySelector("#pTrack").checked,
+        ml:Math.max(0,parseInt(v("#pMl"))||0), pfand:pf, crate:Math.max(0,parseInt(v("#pCrate"))||0), crateP:cp, mhd:v("#pMhd")||""};
+      let ok;
+      if (id){ data.active=r.querySelector("#pActive").checked; if (pf && !S.products[id].pfand){ data.emptyBase=0; data.emptyAt=Date.now(); } ok=await w(db=>db.doc("products/"+id).update(data),"Artikel gespeichert"); }
+      else { const now=Date.now(); Object.assign(data,{active:true, base:Math.max(0,parseInt(v("#pStock"))||0), baseAt:now, emptyBase:0, emptyAt:now}); ok=await w(db=>db.collection("products").doc().set(data),`${name} angelegt`); }
+      if (ok) closeModal();
+    };
+  });
+}
+
+function paymentForm(mid){
+  const ms=membersActive();
+  const pre = mid? -Math.min(0,balance(mid)) : 0;
+  modal(`<h3>Einzahlung erfassen</h3>
+    <label class="f">Mitglied<select id="payM">${ms.map(m=>`<option value="${m.id}" ${m.id===mid?"selected":""}>${esc(m.name)} (${eur(balance(m.id))})</option>`).join("")}</select></label>
+    <div class="grid2"><label class="f">Betrag in €<input type="text" id="payAmt" inputmode="decimal" value="${pre?centsIn(pre):""}" placeholder="20,00"></label>
+    <label class="f">Art<select id="payNote"><option>Abzug Aufwandsentschädigung</option><option>Bar in die Kasse</option><option>Überweisung</option><option>Gutschrift</option><option>Korrektur</option></select></label></div>
+    <span class="hint">Bareinzahlungen erscheinen automatisch im Kassenbuch. Negativer Betrag für eine Belastung, z. B. „-5,00“ als Korrektur.</span>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="paySave">Buchen</button></div>`, r=>{
+    r.querySelector("#paySave").onclick = async ()=>{
+      const m=r.querySelector("#payM").value, amt=parseEur(r.querySelector("#payAmt").value), note=r.querySelector("#payNote").value;
+      if (!m){ toast("Bitte ein Mitglied wählen."); return; }
+      if (!amt){ toast("Bitte einen Betrag eingeben, z. B. 20,00."); return; }
+      const ok = await w(async db=>{ const now=Date.now();
+        await db.collection("payments").doc().set({m, amount:amt, note, ts:now});
+        if (note==="Bar in die Kasse" && amt>0) await db.collection("cash").doc().set({date:today(), type:"in", amount:amt, text:`Einzahlung ${mName(m)}`, cat:"Einzahlung Mitglied", ts:now});
+      }, `${eurS(amt)} für ${mName(m)} gebucht`);
+      if (ok) closeModal();
+    };
+  });
+}
+
+function cashForm(id){
+  const c = id? S.cash[id] : {date:today(), type:"out", amount:0, text:"", cat:"Einkauf Kantine"};
+  modal(`<h3>${id?"Kassenbuchung bearbeiten":"Kassenbuchung erfassen"}</h3>
+    <div class="seg" role="group" aria-label="Art"><button type="button" data-t="in" aria-pressed="${c.type!=="out"}">Einnahme</button><button type="button" data-t="out" aria-pressed="${c.type==="out"}">Ausgabe</button></div>
+    <div class="grid2"><label class="f">Datum<input type="date" id="cDate" value="${esc(c.date)}"></label><label class="f">Betrag in €<input type="text" id="cAmt" inputmode="decimal" value="${c.amount?centsIn(c.amount):""}" placeholder="48,90"></label></div>
+    <label class="f">Buchungstext<input type="text" id="cText" maxlength="100" value="${esc(c.text)}" placeholder="z. B. Getränkemarkt Müller, 4 Kästen"></label>
+    <label class="f">Kategorie<select id="cCat">${CASHCATS.map(k=>`<option ${k===c.cat?"selected":""}>${k}</option>`).join("")}</select></label>
+    ${S.assets?`<label class="f">Beleg (Foto oder PDF)${c.receipt?`<span class="hint">Ein Beleg ist hinterlegt – neue Datei ersetzt ihn.</span>`:""}<input type="file" id="cFile" accept="image/*,application/pdf" capture="environment"></label>`:`<p class="muted small" style="margin:0">Belegfotos lassen sich in dieser Ansicht nicht hochladen.</p>`}
+    <div class="actions">${id?`<button class="btn danger" id="cDel" style="margin-right:auto">Löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cSave">Speichern</button></div>`, r=>{
+    let type=c.type==="out"?"out":"in";
+    r.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{ type=b.dataset.t; r.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+    r.querySelector("#cSave").onclick = async ()=>{
+      const amt=parseEur(r.querySelector("#cAmt").value), text=r.querySelector("#cText").value.trim();
+      if (!(amt>0)){ toast("Bitte einen Betrag größer 0 eingeben."); return; }
+      if (!text){ toast("Bitte einen Buchungstext eingeben."); return; }
+      const btn=r.querySelector("#cSave"); btn.disabled=true; btn.textContent="Speichert …";
+      let receipt=c.receipt||"";
+      const f=r.querySelector("#cFile")?.files?.[0];
+      if (f){ try{ receipt=await uploadReceipt(f); }catch(e){ toast(e&&e.code==="too_large"?"Die Datei ist zu groß (max. 20 MB).":"Beleg konnte nicht hochgeladen werden. Eintrag wird ohne Beleg gespeichert."); receipt=c.receipt||""; } }
+      const data={date:r.querySelector("#cDate").value||today(), type, amount:amt, text, cat:r.querySelector("#cCat").value, receipt};
+      const ok = id? await w(db=>db.doc("cash/"+id).set({...S.cash[id],...data}),"Gespeichert") : await w(db=>db.collection("cash").doc().set({...data,ts:Date.now()}),"Im Kassenbuch erfasst");
+      if (ok) closeModal(); else { btn.disabled=false; btn.textContent="Speichern"; }
+    };
+    const del=r.querySelector("#cDel"); if (del) del.onclick=async()=>{ if (await w(db=>db.doc("cash/"+id).delete(),"Eintrag gelöscht")){ if (c.receipt && S.assets) S.assets.delete(c.receipt).catch(()=>{}); closeModal(); } };
+  });
+}
+async function showReceipt(id){
+  const c=S.cash[id]; if(!c||!c.receipt) return;
+  let r; try{ r=await receiptBlobUrl(c.receipt); }catch(e){ toast("Beleg konnte nicht geladen werden (Internet?)."); return; }
+  modal(`<h3>Beleg</h3><p class="muted" style="margin:0">${dDate(c.date)} · ${esc(c.text)} · ${eur(c.amount)}</p>
+    ${r.pdf?`<p style="margin:0"><a class="btn primary" href="${r.url}" target="_blank" rel="noopener" download="Beleg.pdf">PDF öffnen</a></p>`:`<img class="receipt" src="${r.url}" alt="Beleg ${esc(c.text)}">`}
+    <div class="actions"><button class="btn primary" data-close>Schließen</button></div>`);
+}
+function cashStartForm(){
+  modal(`<h3>Anfangsbestand der Kasse</h3><p class="muted" style="margin:0">Bargeld in der Kantinenkasse zu Beginn der Aufzeichnung, z. B. am 1. Januar nach Kassenzählung.</p>
+    <div class="grid2"><label class="f">Betrag in €<input type="text" id="csAmt" inputmode="decimal" value="${S.settings.cashStart!=null?centsIn(S.settings.cashStart):""}" placeholder="250,00"></label>
+    <label class="f">Stand vom<input type="date" id="csDate" value="${esc(S.settings.cashStartDate||today())}"></label></div>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="csSave">Speichern</button></div>`, r=>{
+    r.querySelector("#csSave").onclick=async()=>{ const a=parseEur(r.querySelector("#csAmt").value); if (isNaN(a)){ toast("Bitte einen Betrag eingeben."); return; }
+      if (await w(db=>db.doc("settings/app").set({...S.settings, cashStart:a, cashStartDate:r.querySelector("#csDate").value}),"Anfangsbestand gespeichert")) closeModal(); };
+  });
+}
+
+function eventForm(id){
+  const e = id? S.events[id] : {title:"",date:today(),time:"19:00",price:0,desc:"",deadline:""};
+  modal(`<h3>${id?"Termin bearbeiten":"Neuer Termin"}</h3>
+    <label class="f">Titel<input type="text" id="eTitle" value="${esc(e.title)}" maxlength="80" placeholder="z. B. Grillabend nach der Jahresübung"></label>
+    <div class="grid2"><label class="f">Datum<input type="date" id="eDate" value="${esc(e.date)}"></label><label class="f">Uhrzeit<input type="time" id="eTime" value="${esc(e.time||"")}"></label></div>
+    <div class="grid2"><label class="f">Kosten pro Person in €<input type="text" id="ePrice" inputmode="decimal" value="${e.price?centsIn(e.price):""}" placeholder="0 = kostenlos"></label>
+    <label class="f">Anmeldeschluss<input type="date" id="eDead" value="${esc(e.deadline||"")}"></label></div>
+    <label class="f">Beschreibung<textarea id="eDesc" rows="3" placeholder="Was gibt es, wer bringt was mit?">${esc(e.desc||"")}</textarea></label>
+    <div class="actions">${id?`<button class="btn danger" id="eDel" style="margin-right:auto">Löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="eSave">Speichern</button></div>`, r=>{
+    r.querySelector("#eSave").onclick = async ()=>{
+      const data={title:r.querySelector("#eTitle").value.trim(), date:r.querySelector("#eDate").value, time:r.querySelector("#eTime").value, deadline:r.querySelector("#eDead").value, desc:r.querySelector("#eDesc").value.trim().slice(0,1000)};
+      const pr=r.querySelector("#ePrice").value.trim(); data.price = pr? parseEur(pr) : 0;
+      if (!data.title||!data.date){ toast("Titel und Datum werden gebraucht."); return; }
+      if (!(data.price>=0)){ toast("Kosten bitte als Zahl eingeben, z. B. 8,50."); return; }
+      const ok = id? await w(db=>db.doc("events/"+id).update(data),"Termin gespeichert") : await w(db=>db.collection("events").doc().set({...data,billed:false,ts:Date.now()}),"Termin angelegt");
+      if (ok) closeModal();
+    };
+    const del=r.querySelector("#eDel"); if(del) del.onclick=async()=>{
+      if (await w(async db=>{ for (const s of list("signups").filter(s=>s.e===id)) await db.doc("signups/"+s.id).delete(); await db.doc("events/"+id).delete(); },"Termin gelöscht")) closeModal();
+    };
+  });
+}
+function signupForm(eid){
+  const e=S.events[eid]; const ms=membersActive();
+  const pre = UI.meId && S.members[UI.meId] ? UI.meId : "";
+  const cur = pre ? S.signups[eid+"_"+pre] : null;
+  modal(`<h3>${esc(e.title)}</h3><p class="muted" style="margin:0">${new Date(e.date+"T12:00:00").toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"})}${e.time?`, ${esc(e.time)} Uhr`:""}${e.price?` · ${eur(e.price)} pro Person`:""}</p>
+    <label class="f">Name<select id="suM"><option value="">Bitte wählen</option>${ms.map(m=>`<option value="${m.id}" ${m.id===pre?"selected":""}>${esc(m.name)}</option>`).join("")}</select></label>
+    <div class="grid2"><label class="f">Personen insgesamt<input type="number" id="suN" min="1" max="10" value="${cur?.count||1}"><span class="hint">Mit Partner oder Kindern mehr eintragen.</span></label>
+    <label class="f">Hinweis<input type="text" id="suNote" maxlength="80" value="${esc(cur?.note||"")}" placeholder="z. B. vegetarisch, bringe Salat"></label></div>
+    <div class="actions"><button class="btn danger" id="suDel" style="margin-right:auto" ${cur?"":"hidden"}>Abmelden</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="suSave">Anmelden</button></div>`, r=>{
+    const sel=r.querySelector("#suM");
+    sel.onchange=()=>{ const c=S.signups[eid+"_"+sel.value]; r.querySelector("#suDel").hidden=!c; if(c){ r.querySelector("#suN").value=c.count||1; r.querySelector("#suNote").value=c.note||""; } };
+    r.querySelector("#suSave").onclick = async ()=>{
+      const m=sel.value; if(!m){ toast("Bitte deinen Namen wählen."); return; }
+      const n=Math.min(10,Math.max(1,parseInt(r.querySelector("#suN").value)||1));
+      if (!UI.meId){ UI.meId=m; ls.set("kantine.me",m); }
+      if (await w(db=>db.doc("signups/"+eid+"_"+m).set({e:eid,m,count:n,note:r.querySelector("#suNote").value.trim(),ts:Date.now()}),`${mName(m)} ist angemeldet`)) closeModal();
+    };
+    r.querySelector("#suDel").onclick = async ()=>{ const m=sel.value; if (await w(db=>db.doc("signups/"+eid+"_"+m).delete(),`${mName(m)} abgemeldet`)) closeModal(); };
+  });
+}
+function billEvent(eid){
+  const e=S.events[eid]; const sus=list("signups").filter(s=>s.e===eid && S.members[s.m]);
+  const total=sus.reduce((s,x)=>s+(x.count||1)*e.price,0);
+  confirmBox("Kosten buchen", `${sus.length} Anmeldungen, zusammen <b>${eur(total)}</b>, werden den Konten belastet (${eur(e.price)} pro Person). Danach ist der Termin als abgerechnet markiert.`, "Jetzt buchen", async()=>{
+    await w(async db=>{ const ts=Date.now(); for (const s of sus) await db.collection("bookings").doc().set({m:s.m,p:"event:"+eid,n:e.title,price:e.price,qty:s.count||1,ts}); await db.doc("events/"+eid).update({billed:true}); }, `${eur(total)} auf ${sus.length} Konten gebucht`);
+  });
+}
+
+function stockForm(mode){
+  const ps = productsActive().filter(p=>p.track!==false);
+  const inv = mode==="inv";
+  modal(`<h3>${inv?"Inventur":"Einkauf einbuchen"}</h3><p class="muted" style="margin:0">${inv?"Gezählten Bestand eintragen. Leere Felder bleiben unverändert.":"Gekaufte Menge je Artikel eintragen. Bei Kastenware Kästen und/oder einzelne Flaschen."}</p>
+    <div>${ps.map(p=>`<div class="mrow"><span><b>${esc(p.name)}</b><br><span class="muted small">jetzt ${units(stock(p.id),p.crate)}</span></span>
+      ${p.crate>1?`<input type="number" min="0" step="1" data-pid="${p.id}" data-k="crate" placeholder="Kästen" aria-label="${esc(p.name)} Kästen">`:`<span></span>`}
+      <input type="number" min="0" step="1" data-pid="${p.id}" data-k="pcs" placeholder="${inv?"Stück":"+ Stück"}" aria-label="${esc(p.name)} Stück">
+      <input type="date" data-pid="${p.id}" data-k="mhd" value="${esc(p.mhd||"")}" aria-label="${esc(p.name)} MHD" title="Nächstes MHD"></div>`).join("")}</div>
+    ${inv||!adminOpen()?"":`<div class="eyebrow">Für das Kassenbuch</div><div class="grid2"><label class="f">Betrag laut Kassenbon in €<input type="text" id="buyAmt" inputmode="decimal" placeholder="leer = nicht aus der Kasse"></label>
+      <label class="f">Geschäft<input type="text" id="buyShop" maxlength="60" placeholder="z. B. Getränkemarkt"></label></div>
+      ${S.assets?`<label class="f">Kassenbon fotografieren<input type="file" id="buyFile" accept="image/*,application/pdf" capture="environment"></label>`:""}`}
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="stSave">${inv?"Bestand übernehmen":"Einbuchen"}</button></div>`, r=>{
+    r.querySelector("#stSave").onclick = async ()=>{
+      const by={};
+      r.querySelectorAll("input[data-pid]").forEach(i=>{ const o=(by[i.dataset.pid]=by[i.dataset.pid]||{}); o[i.dataset.k]=i.value; });
+      const ch=[];
+      for (const [pid,o] of Object.entries(by)){ const p=S.products[pid];
+        const has=(o.crate||"")!==""||(o.pcs||"")!=="";
+        const n=(parseInt(o.crate)||0)*(p.crate||0)+(parseInt(o.pcs)||0);
+        const upd={};
+        if (has){ upd.base = inv? Math.max(0,n) : stock(pid)+Math.max(0,n); upd.baseAt=Date.now(); }
+        if ((o.mhd||"")!==(p.mhd||"")) upd.mhd=o.mhd||"";
+        if (Object.keys(upd).length) ch.push([pid,upd]);
+      }
+      const amtS = (inv||!r.querySelector("#buyAmt"))?"":r.querySelector("#buyAmt").value.trim(); const amt = amtS?parseEur(amtS):0;
+      if (amtS && !(amt>0)){ toast("Betrag bitte als Zahl eingeben, z. B. 48,90."); return; }
+      if (!ch.length && !amt){ closeModal(); return; }
+      const btn=r.querySelector("#stSave"); btn.disabled=true;
+      let receipt="";
+      const f = !inv && r.querySelector("#buyFile")?.files?.[0];
+      if (f){ try{ receipt=await uploadReceipt(f); }catch(e){ toast("Kassenbon konnte nicht hochgeladen werden – Einkauf wird ohne Beleg gebucht."); } }
+      const ok = await w(async db=>{
+        for (const [pid,upd] of ch) await db.doc("products/"+pid).update(upd);
+        if (amt) await db.collection("cash").doc().set({date:today(), type:"out", amount:amt, text:`Einkauf${r.querySelector("#buyShop").value.trim()?` ${r.querySelector("#buyShop").value.trim()}`:""}`, cat:"Einkauf Kantine", receipt, ts:Date.now()});
+      }, inv?"Inventur übernommen":amt?"Einkauf eingebucht und im Kassenbuch erfasst":"Einkauf eingebucht");
+      if (ok) closeModal(); else btn.disabled=false;
+    };
+  });
+}
+function leergutForm(){
+  const ps = productsActive().filter(p=>p.pfand>0);
+  const val = (p,n) => n*p.pfand + (p.crate>1?Math.floor(n/p.crate)*(p.crateP||0):0);
+  modal(`<h3>Leergut zurückgegeben</h3><p class="muted" style="margin:0">Vorausgefüllt mit dem berechneten Leergut. Anpassen, was tatsächlich zurückging.</p>
+    <div>${ps.map(p=>`<div class="mrow" style="grid-template-columns:1fr auto"><span><b>${esc(p.name)}</b><br><span class="muted small">da: ${units(empties(p.id),p.crate)}</span></span><input type="number" min="0" step="1" data-pid="${p.id}" value="${empties(p.id)}" aria-label="${esc(p.name)} Flaschen zurück"></div>`).join("")}</div>
+    <div class="row between"><b>Pfand gesamt</b><b class="num" id="lgSum"></b></div>
+    ${adminOpen()?`<label class="row" style="font-weight:600"><input type="checkbox" id="lgCash" checked> Pfandgeld als Einnahme ins Kassenbuch</label>`:""}
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="lgSave">Übernehmen</button></div>`, r=>{
+    const inputs=[...r.querySelectorAll("input[data-pid]")];
+    const sum=()=>inputs.reduce((s,i)=>s+val(S.products[i.dataset.pid], Math.max(0,parseInt(i.value)||0)),0);
+    const upd=()=>{ r.querySelector("#lgSum").textContent=eur(sum()); }; inputs.forEach(i=>i.oninput=upd); upd();
+    r.querySelector("#lgSave").onclick=async()=>{
+      const total=sum(); const now=Date.now();
+      const ok=await w(async db=>{
+        for (const i of inputs){ const n=Math.max(0,parseInt(i.value)||0); if (!n) continue; const pid=i.dataset.pid; await db.doc("products/"+pid).update({emptyBase:Math.max(0,empties(pid)-n), emptyAt:now}); }
+        if (total>0 && r.querySelector("#lgCash")?.checked) await db.collection("cash").doc().set({date:today(), type:"in", amount:total, text:"Pfandrückgabe Leergut", cat:"Pfandrückgabe", receipt:"", ts:now});
+      }, `Leergut verbucht · ${eur(total)} Pfand`);
+      if (ok) closeModal();
+    };
+  });
+}
+
+async function restoreBackup(file){
+  let data; try{ data=JSON.parse(await file.text()); }catch(e){ toast("Die Datei ist keine gültige Sicherung."); return; }
+  if (!data || data.app!=="kantine" || !Array.isArray(data.docs)){ toast("Die Datei ist keine Kantinen-Sicherung."); return; }
+  confirmBox("Sicherung wiederherstellen", `Sicherung vom ${esc(new Date(data.created).toLocaleString("de-DE"))} mit ${data.docs.length} Einträgen einspielen? Vorhandene Einträge mit gleicher Kennung werden überschrieben, neuere Einträge bleiben erhalten.`, "Wiederherstellen", async()=>{
+    try{
+      for (const d of data.docs) await api.set(d.col, d.id, d.data);
+      for (const c of (data.codes||[])) await api.set("codes", c.member_id, {code:c.code});
+      toast("Sicherung eingespielt – wird abgeglichen."); syncNow();
+    }catch(e){ toast(errText(e)); }
+  }, true);
+}
+async function saveFile(name, text, type){
+  try{
+    const blob = type ? new Blob([text],{type}) : new Blob(["\ufeff"+text],{type:"text/csv;charset=utf-8"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name.replace(/[\\/:*?"<>|]/g,"-");
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+  }catch(e){ copyText(text, "Export – in Excel einfügen"); }
+}
+const csvCell = v => { v=String(v??""); return /[;"\n]/.test(v)? `"${v.replace(/"/g,'""')}"` : v; };
+const csv = (head, rows) => [head.join(";"), ...rows.map(r=>r.map(csvCell).join(";"))].join("\n");
+
+function runClose(){
+  const nB=Object.keys(S.bookings).length, nP=Object.keys(S.payments).length;
+  confirmBox("Abschluss durchführen", `${nB} Buchungen und ${nP} Einzahlungen werden zusammengefasst und dann gelöscht. Kontostände, Bestände, Leergut, Einsatzverpflegung und Statistik bleiben gleich. Das lässt sich nicht rückgängig machen – vorher „Alle Buchungen exportieren“.`, "Abschluss durchführen", async()=>{
+    const now=Date.now();
+    const bk=list("bookings"), py=list("payments");
+    // 1. alles vorher berechnen
+    const agg=monthAgg(); const statsW={};
+    const touched=new Set(bk.filter(isProd).map(b=>ymOf(b.ts||now)));
+    for (const ym of touched) statsW[ym]={month:ym, items:agg[ym]||{}};
+    const prodW=list("products").map(p=>[p.id, clean({base:p.track!==false?stock(p.id):p.base, baseAt:now, emptyBase:p.pfand?empties(p.id):undefined, emptyAt:p.pfand?now:undefined})]);
+    const memW=list("members").map(m=>[m.id, balance(m.id)]);
+    const opW=[...new Set(bk.filter(b=>b.o).map(b=>b.o))].filter(id=>S.ops[id]).map(id=>[id, opTotals(id)]);
+    const rW=[...new Set(bk.filter(b=>b.r).map(b=>b.r))].filter(id=>S.rounds[id]).map(id=>[id, roundTotal(id)]);
+    await w(async db=>{
+      for (const [ym,d] of Object.entries(statsW)) await db.doc("stats/"+ym).set(d);
+      for (const [id,d] of prodW) await db.doc("products/"+id).update(d);
+      for (const [id,c] of memW) await db.doc("members/"+id).update({carry:c, closedAt:now});
+      for (const [id,t] of opW) await db.doc("ops/"+id).update({carry:t});
+      for (const [id,t] of rW) await db.doc("rounds/"+id).update({carryTotal:t});
+      for (const b of bk) await db.doc("bookings/"+b.id).delete();
+      for (const p of py) await db.doc("payments/"+p.id).delete();
+    }, "Abschluss erledigt");
+  }, true);
+}
+
+// ---------- Event wiring ----------
+document.addEventListener("click", async ev => {
+  UI.lastAct=Date.now();
+  const t = ev.target.closest("[data-act]"); if (!t) return;
+  const a=t.dataset.act, id=t.dataset.id;
+  if (t.type==="checkbox" && a!=="shopdone") return;
+  switch(a){
+    case "pick": UI.sel=t.dataset.key; render(); window.scrollTo({top:0}); break;
+    case "unpick": case "alarm": UI.sel=null; render(); window.scrollTo({top:0}); if (a==="alarm") toast("Gemerkt. Die Buchung wartet oben unter „Angefangene Buchungen“."); break;
+    case "dropcart": setCart(t.dataset.key,{}); render(); break;
+    case "add": { if (ev.target.closest(".minus")) return; const c={...cartOf(UI.sel)}; c[id]=(c[id]||0)+1; setCart(UI.sel,c); render(); break; }
+    case "sub": { ev.stopPropagation(); const c={...cartOf(UI.sel)}; c[id]=Math.max(0,(c[id]||0)-1); if(!c[id]) delete c[id]; setCart(UI.sel,c); render(); break; }
+    case "clear": setCart(UI.sel,{}); render(); break;
+    case "book": t.disabled=true; await bookCart(); break;
+    case "storno": { const b=S.bookings[id]; if(!b) return; confirmBox("Buchung stornieren", `${b.qty}× ${esc(b.n)} (${eur(b.price*b.qty)}) wieder austragen?`, "Stornieren", ()=>w(db=>db.doc("bookings/"+id).delete(),"Storniert"), true); break; }
+    case "opnew": opForm(); break;
+    case "opedit": opForm(id); break;
+    case "opend": { const tt=opTotals(id).total; const o=S.ops[id]; confirmBox("Verpflegung beenden", `${esc(o.kind)} „${esc(o.title)}“ mit <b>${eur(tt)}</b> abschließen? Der Kassenwart sieht es danach in der Einsatzverpflegung zur Abrechnung mit der Gemeinde.`, "Beenden", async()=>{ if (await w(db=>db.doc("ops/"+id).update({open:false}),"Verpflegung beendet")){ if (UI.sel==="o:"+id){ setCart(UI.sel,{}); UI.sel=null; } render(); } }); break; }
+    case "opsettle": w(db=>db.doc("ops/"+id).update({settled:!S.ops[id].settled}), S.ops[id].settled?"Zurückgenommen":"Als abgerechnet markiert"); break;
+    case "opreopen": w(db=>db.doc("ops/"+id).update({open:true, settled:false}),"Wieder geöffnet – jetzt an der Strichliste buchbar"); break;
+    case "opcsv": { const Y=+t.dataset.y; const rows=[];
+      for (const o of list("ops").filter(o=>o.date&&+o.date.slice(0,4)===Y).sort((a,b)=>a.date.localeCompare(b.date))){
+        const its={}; for (const b of Object.values(S.bookings)) if (b.o===o.id){ const e=(its[b.n]=its[b.n]||{q:0,c:0}); e.q+=b.qty||1; e.c+=(b.price||0)*(b.qty||1); }
+        for (const [n,q] of Object.entries(o.carry?.items||{})) if (!its[n]) its[n]={q, c:null}; else its[n].q+=q;
+        const tot=opTotals(o.id).total;
+        for (const [n,e] of Object.entries(its)) rows.push([dDate(o.date), o.kind, o.title, n, e.q, e.c==null?"":centsIn(e.c), ""]);
+        rows.push([dDate(o.date), o.kind, o.title, "Summe", "", "", centsIn(tot)]);
+        rows.push([o.settled?"abgerechnet":"offen"]);
+      }
+      saveFile(`Einsatzverpflegung-${Y}.csv`, csv(["Datum","Art","Stichwort","Artikel","Menge","Betrag EUR","Summe EUR"], rows)); break; }
+    case "roundnew": roundForm(); break;
+    case "roundend": { const r=S.rounds[id]; confirmBox("Runde beenden", `Die Runde von <b>${esc(mName(r.payer))}</b> kostet <b>${eur(roundTotal(id))}</b>. Alles ist bereits auf ihr Konto gebucht. Runde jetzt schließen?`.replace("ihr Konto","das Konto"), "Runde beenden", async()=>{ if (await w(db=>db.doc("rounds/"+id).update({open:false}),"Runde beendet – danke fürs Ausgeben!")){ setCart("r:"+id,{}); UI.sel=null; render(); } }); break; }
+    case "signup": signupForm(id); break;
+    case "evtoggle": UI.openEvent = UI.openEvent===id?null:id; render(); break;
+    case "pasttoggle": UI.showPast=!UI.showPast; render(); break;
+    case "evnew": eventForm(); break;
+    case "evedit": eventForm(id); break;
+    case "evbill": billEvent(id); break;
+    case "einkauf": stockForm("buy"); break;
+    case "inventur": stockForm("inv"); break;
+    case "leergut": leergutForm(); break;
+    case "shopdone": { const it=S.shopping[id]; if(it) w(db=>db.doc("shopping/"+id).update({done:!it.done, by: !it.done && UI.meId ? mName(UI.meId) : ""})); break; }
+    case "shopdel": w(db=>db.doc("shopping/"+id).delete()); break;
+    case "shopclear": w(async db=>{ for (const i of list("shopping").filter(i=>i.done)) await db.doc("shopping/"+i.id).delete(); }, "Erledigte entfernt"); break;
+    case "shopshare": copyText(shoppingText(), "Einkaufsliste kopieren"); break;
+    case "statmonth": UI.statMonth=t.dataset.ym; render(); break;
+    case "statmeas": UI.statMeasure=t.dataset.m; render(); break;
+    case "atab": UI.adminTab=t.dataset.tab; render(); break;
+    case "goadmin": UI.adminTab=t.dataset.tab||"konten"; location.hash="#verwaltung"; break;
+    case "mnew": memberForm(); break;
+    case "medit": memberForm(id); break;
+    case "pnew": productForm(); break;
+    case "pedit": productForm(id); break;
+    case "pay": paymentForm(id); break;
+    case "qr": qrModal(id); break;
+    case "backup": {
+      const out={app:"kantine", version:1, created:new Date().toISOString(), docs:[], codes:Object.entries(S.codes).map(([m,code])=>({member_id:m,code}))};
+      for (const c of COLS) for (const [did,d] of Object.entries(S[c])) out.docs.push({col:c,id:did,data:d});
+      out.docs.push({col:"settings",id:"app",data:S.settings});
+      saveFile(`Kantine-Sicherung-${today()}.json`, JSON.stringify(out), "application/json");
+      if (canWrite()) w(db=>db.doc("settings/app").set({...S.settings,lastBackup:Date.now()}));
+      break; }
+    case "qrall": printAll(); break;
+    case "logout": logoutDevice(); break;
+    case "pwchange": pwModal(); break;
+    case "syncnow": syncNow(); break;
+    case "tpinrm": confirmBox("Team-PIN entfernen","Dann ist die Kantine auf verbundenen Geräten ohne PIN bedienbar.","Team-PIN entfernen",()=>w(db=>db.doc("settings/app").set({...S.settings,teamPinHash:""}),"Team-PIN entfernt"),true); break;
+    case "tpin": {
+      const k=t.dataset.k;
+      if (k==="c") tpinBuf=tpinBuf.slice(0,-1);
+      else if (k==="ok"){ const h=await sha(tpinBuf); tpinBuf="";
+        if (h===S.settings.teamPinHash || h===S.settings.pinHash){ UI.tlocked=false; UI.lastAct=Date.now(); if (h===S.settings.pinHash){ UI.unlocked=true; UI.unlockAt=Date.now(); } render(); return; }
+        toast("PIN falsch."); }
+      else if (tpinBuf.length<6) tpinBuf+=k;
+      document.querySelectorAll("#tpinDots i").forEach((d,i)=>d.classList.toggle("f", i<tpinBuf.length));
+      break; }
+    case "aeprep": aePrep(); break;
+    case "aeshow": aeShow(id); break;
+    case "cashnew": cashForm(); break;
+    case "cashedit": cashForm(id); break;
+    case "cashstart": cashStartForm(); break;
+    case "receipt": showReceipt(id); break;
+    case "cashcsv": { const Y=+t.dataset.y; let run=S.settings.cashStart||0; const rows=[];
+      for (const c of cashSorted()){ run+=c.type==="out"?-c.amount:c.amount; if (+String(c.date).slice(0,4)===Y) rows.push([dDate(c.date), c.text, c.cat||"", c.type!=="out"?centsIn(c.amount):"", c.type==="out"?centsIn(c.amount):"", centsIn(run), c.receipt?"ja":"nein"]); }
+      saveFile(`Kassenbuch-${Y}.csv`, csv(["Datum","Buchungstext","Kategorie","Einnahme EUR","Ausgabe EUR","Bestand EUR","Beleg"], rows)); break; }
+    case "sample": {
+      const now=Date.now();
+      const sample=[["Mineralwasser 0,7 l",100,"Getränke",12,700,15,12,150],["Apfelschorle 0,5 l",120,"Getränke",12,500,15,20,150],["Spezi 0,5 l",150,"Getränke",20,500,8,20,150],["Helles 0,5 l",180,"Getränke",20,500,8,20,150],["Radler 0,5 l",180,"Getränke",10,500,8,20,150],["Alkoholfreies Weizen 0,5 l",180,"Getränke",6,500,8,20,150],["Kaffee",80,"Heißgetränke",0,200,0,0,0,false],["Bratwurst im Brötchen",250,"Essen",10,0,0,0,0],["Schokoriegel",100,"Snacks",10,0,0,0,0]];
+      w(async db=>{ for (const [name,price,cat,min,ml,pfand,crate,crateP,track] of sample) await db.collection("products").doc().set({name,price,cat,min,ml,pfand,crate,crateP,mhd:"",track:track!==false,base:0,baseAt:now,emptyBase:0,emptyAt:now,active:true}); }, "Beispiel-Sortiment angelegt – Preise, Pfand und Bestand bitte anpassen");
+      break; }
+    case "csv": {
+      const rows=membersActive().map(m=>[m.name, centsIn(balance(m.id)), lastActivity(m.id)?new Date(lastActivity(m.id)).toLocaleString("de-DE"):""]);
+      saveFile(`Kantine-Konten-${today()}.csv`, csv(["Name","Kontostand EUR","Letzte Buchung"], rows)); break; }
+    case "csvtx": {
+      const rows=[...list("bookings").map(b=>[new Date(b.ts).toLocaleString("de-DE"), b.o?`Wehr: ${S.ops[b.o]?.title||""}`:mName(b.m), b.o?"Einsatzverpflegung":b.r?"Runde":"Verzehr", `${b.qty}x ${b.n}`, centsIn(-(b.price*b.qty)), b.by||""]),
+        ...list("payments").map(p=>[new Date(p.ts).toLocaleString("de-DE"),mName(p.m),"Einzahlung",p.note||"",centsIn(p.amount),""])];
+      saveFile(`Kantine-Buchungen-${today()}.csv`, csv(["Zeitpunkt","Name","Art","Text","Betrag EUR","Gebucht von"], rows)); break; }
+    case "close": runClose(); break;
+    case "lock": UI.unlocked=false; render(); break;
+    case "pinrm": confirmBox("PIN entfernen","Dann kann am gemeinsamen Tablet jeder die Verwaltung öffnen.","PIN entfernen",()=>w(db=>db.doc("settings/app").set({...S.settings,pinHash:""}),"PIN entfernt"),true); break;
+    case "pin": {
+      const k=t.dataset.k;
+      if (k==="c") pinBuf=pinBuf.slice(0,-1);
+      else if (k==="ok"){ const h=await sha(pinBuf); pinBuf=""; if (h===S.settings.pinHash){ UI.unlocked=true; UI.unlockAt=Date.now(); render(); return; } toast("PIN falsch."); }
+      else if (pinBuf.length<6) pinBuf+=k;
+      document.querySelectorAll("#pinDots i").forEach((d,i)=>d.classList.toggle("f", i<pinBuf.length));
+      break; }
+  }
+});
+document.addEventListener("keydown", e => { if ((e.key==="Enter"||e.key===" ") && e.target.classList?.contains("ptile")){ e.preventDefault(); e.target.click(); } });
+document.addEventListener("input", e => { if (e.target.id==="kSearch"){ UI.search=e.target.value; render(); } });
+document.addEventListener("change", e => {
+  const id=e.target.id;
+  if (id==="meSel"){ UI.meId=e.target.value||null; ls.set("kantine.me",UI.meId); render(); }
+  if (id==="debtOnly"){ UI.debtOnly=e.target.checked; render(); }
+  if (id==="statProd"){ UI.statProd=e.target.value; render(); }
+  if (id==="yearSel"){ UI.year=+e.target.value; render(); }
+  if (id==="cashYear"){ UI.cashYear=+e.target.value; render(); }
+  if (id==="opYear"){ UI.opYear=+e.target.value; render(); }
+  if (id==="restoreFile" && e.target.files[0]) restoreBackup(e.target.files[0]);
+});
+document.addEventListener("submit", async e => {
+  e.preventDefault();
+  if (e.target.id==="shopForm"){ const inp=$("#shopText"); const v=inp.value.trim(); if(!v) return; if (await w(db=>db.collection("shopping").doc().set({text:v.slice(0,80),done:false,ts:Date.now()}))) inp.value=""; }
+  if (e.target.id==="setForm"){
+    const unit=$("#setUnit").value.trim().slice(0,60), pin=$("#setPin").value.trim(), tpin=$("#setTPin").value.trim();
+    if ((pin && !/^\d{4,6}$/.test(pin)) || (tpin && !/^\d{4,6}$/.test(tpin))){ toast("Eine PIN braucht 4 bis 6 Ziffern."); return; }
+    if (tpin && pin && tpin===pin){ toast("Team-PIN und Admin-PIN müssen verschieden sein."); return; }
+    const data={...S.settings, unit}; if (pin) data.pinHash=await sha(pin); if (tpin) data.teamPinHash=await sha(tpin);
+    $("#setTPin").value="";
+    if (await w(db=>db.doc("settings/app").set(data), pin?"Gespeichert – PIN ist aktiv":"Gespeichert")){ $("#setPin").value=""; if(pin){ UI.unlocked=true; UI.unlockAt=Date.now(); } }
+  }
+});
+document.addEventListener("pointerdown", ()=>{ UI.lastAct=Date.now(); if (UI.unlocked) UI.unlockAt=Date.now(); }, {passive:true});
+
+// Sperre nach 10 Minuten ohne Bedienung (wenn Team-PIN gesetzt)
+setInterval(()=>{ if (MODE==="staff" && S.settings.teamPinHash && !UI.tlocked && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML){ UI.tlocked=true; UI.unlocked=false; render(); } }, 15000);
+// Alarm-Pause: nach 2 Minuten ohne Eingabe zurück zur Namensliste, Warenkorb bleibt gemerkt
+setInterval(()=>{ if (UI.view==="kiosk" && UI.sel && Date.now()-UI.lastAct > 120000 && !$("#modalRoot").innerHTML){ UI.sel=null; render(); } }, 15000);
+
+// Bildschirm bleibt an (Kiosk)
+let wakeLock=null, wakeBusy=false;
+async function wakeCheck(){
+  const want = UI.view==="kiosk" && document.visibilityState==="visible";
+  if (want && !wakeLock && !wakeBusy && navigator.wakeLock){
+    wakeBusy=true;
+    try{ wakeLock=await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release",()=>{ wakeLock=null; $("#wake").hidden=true; }); }catch(e){ wakeLock=null; }
+    wakeBusy=false;
+  } else if (!want && wakeLock){ try{ await wakeLock.release(); }catch(e){} wakeLock=null; }
+  $("#wake").hidden = !wakeLock;
+}
+document.addEventListener("visibilitychange", wakeCheck);
+document.addEventListener("click", ()=>{ if (!wakeLock) wakeCheck(); });
+
+// Routing
+function route(){ if (MODE!=="staff") return; const h=location.hash.slice(1); UI.view = VIEWS.includes(h)? h : "kiosk"; if (UI.view!=="kiosk") UI.sel=null; closeModal(); render(); window.scrollTo({top:0}); }
+window.addEventListener("hashchange", route);
+function sync(state){ $("#syncDot").className="dot"+(state==="on"?" on":state==="err"?" err":""); $("#syncText").textContent = state==="on"?"Live":state==="err"?"Offline":"Verbinde …"; }
+
+// ================= Speicher: verschlüsselt im privaten GitHub-Repository =================
+// Jedes Gerät hält eine vollständige Kopie. Änderungen werden als Operationen gesammelt und
+// beim Abgleich auf den neuesten Stand im Repository angewendet (funktioniert auch offline).
+const GH = "https://api.github.com";
+const OWNER = CFG.owner, APPREPO = CFG.appRepo, DATAREPO = CFG.dataRepo;
+const tenc = new TextEncoder(), tdec = new TextDecoder();
+let TOKEN = "", DEK = null, HDR = null;           // HDR = {salt, wrap} aus der Datendatei
+let REMOTE = {sha:null, state:null}, PENDING = [];
+let syncing=false, syncTimer=null, lastSync=0, syncErr="", needWrite=false;
+function randId(n){ const a=new Uint8Array(n); crypto.getRandomValues(a); return btoa(String.fromCharCode(...a)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+const DEV = (()=>{ let d=ls.get("kantine.dev"); if(!d){ d=randId(6); ls.set("kantine.dev",d); } return d; })();
+const ss = { get(k){ try{return sessionStorage.getItem(k)}catch(e){return null} }, set(k,v){ try{ v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v) }catch(e){} } };
+
+// --- Krypto
+const b64 = buf => { const a=new Uint8Array(buf); let s=""; for (let i=0;i<a.length;i+=0x8000) s+=String.fromCharCode(...a.subarray(i,i+0x8000)); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(String(s).replace(/\s/g,"")), c=>c.charCodeAt(0));
+async function gz(bytes){ return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer()); }
+async function gunz(bytes){ return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()); }
+async function seal(key, bytes){ const iv=crypto.getRandomValues(new Uint8Array(12)); return {iv:b64(iv), ct:b64(await crypto.subtle.encrypt({name:"AES-GCM",iv}, key, bytes))}; }
+async function unseal(key, o){ return new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM", iv:unb64(o.iv)}, key, unb64(o.ct))); }
+async function kek(pw, salt){ const base=await crypto.subtle.importKey("raw", tenc.encode(pw), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2", salt, iterations:310000, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]); }
+const importDek = raw => crypto.subtle.importKey("raw", raw, "AES-GCM", true, ["encrypt","decrypt"]);
+async function newHeader(pw, dekRaw){ const salt=crypto.getRandomValues(new Uint8Array(16)); return {salt:b64(salt), wrap:await seal(await kek(pw, salt), dekRaw)}; }
+async function encState(state){ return JSON.stringify({app:"kantine", v:2, salt:HDR.salt, wrap:HDR.wrap, ...(await seal(DEK, await gz(tenc.encode(JSON.stringify(state)))))}); }
+async function decState(text){ const f=JSON.parse(text); HDR={salt:f.salt, wrap:f.wrap}; return JSON.parse(tdec.decode(await gunz(await unseal(DEK, f)))); }
+
+// --- GitHub API
+async function gh(path, opt={}){
+  const r=await fetch(GH+path, {...opt, cache:"no-store", headers:{Accept:"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28", Authorization:"Bearer "+TOKEN, ...(opt.body?{"Content-Type":"application/json"}:{}), ...(opt.headers||{})}});
+  if (r.status===204) return null;
+  const j=await r.json().catch(()=>null);
+  if (!r.ok){ const e=new Error((j&&j.message)||r.statusText); e.status=r.status; throw e; }
+  return j;
+}
+const encPath = p => p.split("/").map(encodeURIComponent).join("/");
+async function ghRead(repo, path){
+  try{
+    const j=await gh(`/repos/${OWNER}/${repo}/contents/${encPath(path)}`);
+    if (j.content && j.encoding==="base64") return {sha:j.sha, bytes:unb64(j.content)};
+    const raw=await fetch(GH+`/repos/${OWNER}/${repo}/contents/${encPath(path)}`, {cache:"no-store", headers:{Accept:"application/vnd.github.raw", Authorization:"Bearer "+TOKEN}});
+    if (!raw.ok){ const e=new Error(raw.statusText); e.status=raw.status; throw e; }
+    return {sha:j.sha, bytes:new Uint8Array(await raw.arrayBuffer())};
+  }catch(e){ if (e.status===404) return null; throw e; }
+}
+const ghWrite = (repo, path, bytes, sha, message) => gh(`/repos/${OWNER}/${repo}/contents/${encPath(path)}`, {method:"PUT", body:JSON.stringify({message, content:b64(bytes), ...(sha?{sha}:{})})});
+
+// --- Zustand & Operationen
+function emptyState(){ const st={settings:{}, codes:{}}; COLS.forEach(c=>st[c]={}); return st; }
+const clone = o => JSON.parse(JSON.stringify(o));
+function applyOp(st, op){
+  if (op.col==="settings"){ if (op.id==="app"){ if (op.t==="set") st.settings={...op.data}; else if (op.t==="patch") st.settings={...(st.settings||{}),...op.data}; } return; }
+  const c = st[op.col] || (st[op.col]={});
+  if (op.t==="set") c[op.id]=op.data;
+  else if (op.t==="patch"){ if (c[op.id]) c[op.id]={...c[op.id], ...op.data}; }
+  else if (op.t==="del") delete c[op.id];
+}
+function rebuild(){
+  const st = clone(REMOTE.state || emptyState()); PENDING.forEach(o=>applyOp(st,o));
+  COLS.forEach(c=>{ S[c]=st[c]||{}; S.loaded.add(c); }); S.settings=st.settings||{}; S.loaded.add("settings");
+  S.codes = Object.fromEntries(Object.entries(st.codes||{}).map(([k,v])=>[k, v.code]));
+}
+let persistBusy=false, persistAgain=false;
+async function persist(){
+  if (!DEK) return; if (persistBusy){ persistAgain=true; return; } persistBusy=true;
+  try{ ls.set("kantine.cache", JSON.stringify({hdr:HDR, ...(await seal(DEK, await gz(tenc.encode(JSON.stringify({remote:REMOTE, pending:PENDING})))))})); }catch(e){}
+  persistBusy=false; if (persistAgain){ persistAgain=false; persist(); }
+}
+async function loadCache(){
+  try{ const o=JSON.parse(ls.get("kantine.cache")||"null"); if (!o) return false; const d=JSON.parse(tdec.decode(await gunz(await unseal(DEK,o))));
+    REMOTE=d.remote||REMOTE; PENDING=d.pending||[]; if (o.hdr) HDR=o.hdr; return true; }catch(e){ return false; }
+}
+function pushOp(op){ PENDING.push({...op, ts:Date.now(), dev:DEV}); rebuild(); persist(); schedule(); updSync(); scheduleSync(); }
+const api = {
+  async set(col,id,data){ pushOp({t:"set",col,id,data:clone(data)}); },
+  async patch(col,id,p){ const ok = col==="settings" || (S[col]||{})[id]; if (!ok) throw {code:"invalid_argument", message:"Eintrag nicht gefunden"}; pushOp({t:"patch",col,id,data:clone(p)}); },
+  async del(col,id){ pushOp({t:"del",col,id}); }
+};
+function dbRef(col,id){ return { id, set:d=>api.set(col,id,d), update:d=>api.patch(col,id,d), delete:()=>api.del(col,id) }; }
+const DB = {
+  collection(c){ return { doc(id){ return dbRef(c, id || randId(12)); } }; },
+  doc(path){ const i=path.indexOf("/"); return dbRef(path.slice(0,i), path.slice(i+1)); }
+};
+
+// --- Abgleich
+function scheduleSync(ms){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow, ms==null?6000:ms); }
+async function syncNow(){
+  if (!TOKEN || !DEK) return;
+  if (syncing){ scheduleSync(3000); return; }
+  syncing=true; updSync();
+  try{
+    for (let attempt=0; ; attempt++){
+      const cur = await ghRead(DATAREPO, "data.enc");
+      let base;
+      if (!cur) base = REMOTE.state || emptyState();
+      else if (cur.sha===REMOTE.sha && REMOTE.state) base = REMOTE.state;
+      else base = await decState(tdec.decode(cur.bytes));
+      if (!PENDING.length && !needWrite && cur){ REMOTE={sha:cur.sha, state:base}; break; }
+      const sent=PENDING.length; const st=clone(base); PENDING.slice(0,sent).forEach(o=>applyOp(st,o));
+      try{
+        const res = await ghWrite(DATAREPO, "data.enc", tenc.encode(await encState(st)), cur&&cur.sha, `Kantine: ${sent} Änderung${sent===1?"":"en"} (${S.email||"Gerät"})`);
+        REMOTE={sha:res.content.sha, state:st}; PENDING=PENDING.slice(sent); needWrite=false; break;
+      }catch(e){ if ((e.status===409 || e.status===422) && attempt<5) continue; throw e; }
+    }
+    lastSync=Date.now(); syncErr=""; S.offline=false;
+    rebuild(); persist(); schedule(); publishSoon();
+  }catch(e){
+    S.offline=true;
+    syncErr = e.status===401 ? "Zugangsschlüssel ungültig oder abgelaufen"
+            : (e.status===403 || e.status===404) ? "Kein Zugriff auf das Daten-Repository"
+            : (e.name==="OperationError") ? "Daten passen nicht zum Schlüssel dieses Geräts – bitte Gerät neu anmelden"
+            : "Keine Verbindung";
+  }finally{ syncing=false; updSync(); if (PENDING.length) scheduleSync(syncErr?30000:4000); }
+}
+function updSync(){
+  const dot=$("#syncDot"), tx=$("#syncText"); if (!dot) return;
+  const n=PENDING.length;
+  dot.className = "dot" + (syncErr?" err":(n||syncing)?"":" on");
+  tx.textContent = syncing ? "Gleiche ab …" : syncErr ? `${syncErr}${n?` · ${n} offen`:""}` : n ? `${n} Änderung${n===1?"":"en"} offen` : lastSync ? `Aktuell · ${new Date(lastSync).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}` : "Bereit";
+}
+const syncLabel = () => syncErr ? `Problem: ${syncErr}` : PENDING.length ? `${PENDING.length} Änderungen noch nicht abgeglichen` : lastSync ? `Zuletzt abgeglichen: ${tsStr(lastSync)}` : "Noch nicht abgeglichen";
+setInterval(()=>{ if (MODE==="staff" && document.visibilityState==="visible" && Date.now()-lastSync>60000) syncNow(); }, 20000);
+document.addEventListener("visibilitychange", ()=>{ if (MODE==="staff" && document.visibilityState==="visible") syncNow(); });
+window.addEventListener("online", ()=>{ if (MODE==="staff") syncNow(); });
+window.addEventListener("beforeunload", e=>{ if (MODE==="staff" && PENDING.length){ syncNow(); e.preventDefault(); e.returnValue=""; } });
+
+// --- Belege (verschlüsselt im Daten-Repository)
+const assetsAdapter = {
+  async upload(blob){
+    const t=blob.type||"application/octet-stream";
+    const o=await seal(DEK, new Uint8Array(await blob.arrayBuffer()));
+    const path=`belege/${new Date().getFullYear()}/${Date.now()}-${randId(6)}.enc`;
+    try{ await ghWrite(DATAREPO, path, tenc.encode(JSON.stringify({type:t, ...o})), null, "Beleg"); }
+    catch(e){ throw {code: e.status===422?"too_large":"error", message:e.message}; }
+    return {id:path};
+  },
+  async delete(path){ try{ const cur=await ghRead(DATAREPO, path); if (cur) await gh(`/repos/${OWNER}/${DATAREPO}/contents/${encPath(path)}`, {method:"DELETE", body:JSON.stringify({message:"Beleg gelöscht", sha:cur.sha})}); }catch(e){} return {deleted:true}; }
+};
+async function receiptBlobUrl(path){
+  const cur=await ghRead(DATAREPO, path); if (!cur) throw new Error("nicht gefunden");
+  const o=JSON.parse(tdec.decode(cur.bytes)); const bytes=await unseal(DEK, o);
+  return {url:URL.createObjectURL(new Blob([bytes],{type:o.type})), pdf:o.type==="application/pdf"};
+}
+
+// ================= Persönliche Codes, QR & Kontoauszüge =================
+const memberLink = code => location.origin + location.pathname.replace(/index\.html$/,"") + "#k=" + code;
+function qrSvg(text){ const q=qrcode(0,"M"); q.addData(text); q.make(); return q.createSvgTag({cellSize:4, margin:2, scalable:true, alt:"QR-Code"}); }
+async function makeCode(mid){ const code=randId(24); await api.set("codes", mid, {code}); return code; }
+async function memberFile(code){
+  const h=new Uint8Array(await crypto.subtle.digest("SHA-256", tenc.encode("kantine-datei:"+code)));
+  const path="m/"+[...h.slice(0,16)].map(b=>b.toString(16).padStart(2,"0")).join("")+".json";
+  const key=await crypto.subtle.importKey("raw", await crypto.subtle.digest("SHA-256", tenc.encode("kantine-schluessel:"+code)), "AES-GCM", false, ["encrypt","decrypt"]);
+  return {path, key};
+}
+function memberSnapshot(mid){
+  const m=S.members[mid]; const bk=list("bookings").filter(b=>b.m===mid);
+  return { name:m.name, carry:m.carry||0, unit:S.settings.unit||"",
+    bookings:bk.map(b=>({n:b.n, qty:b.qty, price:b.price, ts:b.ts, r:b.r||null})),
+    payments:list("payments").filter(p=>p.m===mid).map(p=>({amount:p.amount, note:p.note, ts:p.ts})),
+    rounds:Object.fromEntries([...new Set(bk.filter(b=>b.r).map(b=>b.r))].filter(r=>S.rounds[r]).map(r=>[r, S.rounds[r].reason||""])),
+    events:list("events").filter(e=>e.date>=today()).sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||""))).map(e=>({id:e.id, title:e.title, date:e.date, time:e.time||"", price:e.price||0, deadline:e.deadline||"", desc:e.desc||"",
+      persons:list("signups").filter(s=>s.e===e.id).reduce((a,s)=>a+(s.count||1),0)})),
+    signups:list("signups").filter(s=>s.m===mid).map(s=>({e:s.e, count:s.count, note:s.note||""})) };
+}
+let pubTimer=null, pubBusy=false;
+function publishSoon(){ clearTimeout(pubTimer); pubTimer=setTimeout(publishMembers, 45000); }
+async function publishMembers(){
+  if (!TOKEN || !DEK || pubBusy) return;
+  if (PENDING.length){ publishSoon(); return; }
+  pubBusy=true;
+  try{
+    const snaps={}; for (const [mid,code] of Object.entries(S.codes)) if (S.members[mid] && code) snaps[mid]=memberSnapshot(mid);
+    const fp=await sha(JSON.stringify([snaps, S.codes, today()]));
+    if (fp===ls.get("kantine.pubfp")) return;
+    const at=Date.now(); const tree=[{path:"README.md", mode:"100644", type:"blob", content:"Verschlüsselte Kontoauszüge der Kantine. Nur mit dem persönlichen QR-Code lesbar.\n"}];
+    for (const [mid,snap] of Object.entries(snaps)){ const {path,key}=await memberFile(S.codes[mid]); tree.push({path, mode:"100644", type:"blob", content:JSON.stringify(await seal(key, await gz(tenc.encode(JSON.stringify({...snap, at})))))}); }
+    const t=await gh(`/repos/${OWNER}/${APPREPO}/git/trees`, {method:"POST", body:JSON.stringify({tree})});
+    const c=await gh(`/repos/${OWNER}/${APPREPO}/git/commits`, {method:"POST", body:JSON.stringify({message:"Kontoauszüge aktualisiert", tree:t.sha, parents:[]})});
+    try{ await gh(`/repos/${OWNER}/${APPREPO}/git/refs/heads/konten`, {method:"PATCH", body:JSON.stringify({sha:c.sha, force:true})}); }
+    catch(e){ if (e.status===404 || e.status===422) await gh(`/repos/${OWNER}/${APPREPO}/git/refs`, {method:"POST", body:JSON.stringify({ref:"refs/heads/konten", sha:c.sha})}); else throw e; }
+    ls.set("kantine.pubfp", fp);
+  }catch(e){ console.warn("Kontoauszüge nicht veröffentlicht", e); publishSoon(); }
+  finally{ pubBusy=false; }
+}
+function qrModal(mid){
+  const m=S.members[mid]; if (!m) return;
+  const code=S.codes[mid];
+  if (!code){
+    modal(`<h3>QR-Code für ${esc(m.name)}</h3><p style="margin:0">Mit dem persönlichen QR-Code sieht ${esc(firstName(m.name))} am Handy den eigenen Kontostand, die Buchungen und die nächsten Termine – ohne Anmeldung. Andere Konten sind darüber nicht sichtbar.</p>
+      <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="qrMake">QR-Code erzeugen</button></div>`, r=>{
+      r.querySelector("#qrMake").onclick=async()=>{ await makeCode(mid); qrModal(mid); render(); };
+    });
+    return;
+  }
+  const link=memberLink(code);
+  modal(`<h3>QR-Code für ${esc(m.name)}</h3>
+    <div class="qrbox">${qrSvg(link)}</div>
+    <div class="linkbox" id="qrLink">${esc(link)}</div>
+    <p class="muted small" style="margin:0">Nur an ${esc(firstName(m.name))} weitergeben. Wer den Link hat, sieht dieses Konto. Ist der Zettel verloren, erzeuge einen neuen Code – der alte funktioniert dann nicht mehr. Neue Codes und Buchungen erscheinen am Handy nach einigen Minuten.</p>
+    <div class="actions"><button class="btn danger" id="qrNew" style="margin-right:auto">Neuen Code erzeugen</button><button class="btn" id="qrCopy">Link kopieren</button><button class="btn" id="qrPrint">Zettel drucken</button><button class="btn primary" data-close>Fertig</button></div>`, r=>{
+    r.querySelector("#qrCopy").onclick=()=>copyText(link,"Persönlicher Link");
+    r.querySelector("#qrPrint").onclick=()=>printCards([mid]);
+    let armed=false;
+    r.querySelector("#qrNew").onclick=async()=>{
+      const b=r.querySelector("#qrNew");
+      if (!armed){ armed=true; b.textContent="Alter Code wird ungültig – bestätigen"; return; }
+      await makeCode(mid); toast("Neuer Code erzeugt. Der alte Link funktioniert nicht mehr."); qrModal(mid); render();
+    };
+  });
+}
+function printCards(ids){
+  const unit=S.settings.unit||"Freiwillige Feuerwehr";
+  let el=document.getElementById("printSheet"); if (!el){ el=document.createElement("div"); el.id="printSheet"; document.body.appendChild(el); }
+  el.innerHTML = ids.filter(id=>S.codes[id]&&S.members[id]).map(id=>`<div class="pcard"><div class="pu">${esc(unit)} · Kantine</div><div class="pn">${esc(S.members[id].name)}</div>${qrSvg(memberLink(S.codes[id]))}<div class="pt">Dein Kantinenkonto: mit der Handykamera scannen und als Lesezeichen speichern.<br>Persönlich – bitte nicht weitergeben.</div></div>`).join("");
+  setTimeout(()=>{ try{ window.print(); }catch(e){ toast("Drucken ist hier nicht möglich."); } }, 50);
+}
+async function printAll(){
+  const ms=membersActive();
+  for (const m of ms) if (!S.codes[m.id]) await makeCode(m.id);
+  render(); printCards(ms.map(m=>m.id));
+}
+
+// ================= Gerät einrichten / anmelden =================
+function setChrome(staff){ $("#tabs").hidden=!staff; $("#sync").hidden=!staff; }
+function showMsg(title, text, extra){ $("#main").innerHTML=`<div class="login"><div class="empty"><b>${title}</b><span>${text}</span>${extra||""}</div></div>`; }
+function showSetup(msg){
+  MODE="login"; setChrome(false);
+  $("#main").innerHTML=`<form class="login panel" id="setupForm" autocomplete="off">
+      <div><div class="eyebrow">Gerät verbinden</div><h2>Kantine öffnen</h2></div>
+      <p class="muted" style="margin:0">Einmal pro Gerät – z. B. Tablet auf der Wache oder PC zu Hause.</p>
+      ${msg?`<div class="note">${esc(msg)}</div>`:""}
+      <label class="f">Zugangsschlüssel (GitHub)<input type="password" id="suToken" required placeholder="github_pat_…" autocomplete="off"><span class="hint">Steht in der Anleitung, Schritt 3. Bekommst du vom Kassenwart.</span></label>
+      <label class="f">Kantinen-Passwort<input type="password" id="suPw" required autocomplete="current-password"></label>
+      <label class="f">Name dieses Geräts<input type="text" id="suDev" maxlength="40" placeholder="z. B. Tablet Wache, PC Kassenwart" value="${esc(ls.get("kantine.devname")||"")}"><span class="hint">Wird bei jeder Buchung vermerkt.</span></label>
+      <label class="row" style="font-weight:600"><input type="checkbox" id="suKeep" checked> Auf diesem Gerät angemeldet bleiben</label>
+      <button class="btn primary" type="submit" id="suBtn">Verbinden</button>
+    </form>`;
+  $("#setupForm").onsubmit=async e=>{ e.preventDefault(); e.stopPropagation();
+    const b=$("#suBtn"); b.disabled=true; b.textContent="Verbinde …";
+    TOKEN=$("#suToken").value.trim(); const pw=$("#suPw").value, keep=$("#suKeep").checked, devname=$("#suDev").value.trim()||"Gerät";
+    try{
+      const cur=await ghRead(DATAREPO, "data.enc");
+      if (!cur){ b.disabled=false; b.textContent="Verbinden"; return showCreate(pw, keep, devname); }
+      const f=JSON.parse(tdec.decode(cur.bytes));
+      let raw; try{ raw=await unseal(await kek(pw, unb64(f.salt)), f.wrap); }catch(err){ throw {pw:true}; }
+      DEK=await importDek(raw); HDR={salt:f.salt, wrap:f.wrap};
+      REMOTE={sha:cur.sha, state:await decState(tdec.decode(cur.bytes))};
+      await remember(raw, keep, devname); PENDING=[]; startStaff();
+    }catch(err){
+      b.disabled=false; b.textContent="Verbinden";
+      toast(err.pw ? "Kantinen-Passwort falsch." : err.status===401 ? "Zugangsschlüssel ungültig oder abgelaufen." : (err.status===403||err.status===404) ? "Der Schlüssel hat keinen Zugriff auf das Daten-Repository (siehe Anleitung, Schritt 3)." : "Verbindung fehlgeschlagen. Internet prüfen.");
+    }
+  };
+}
+function showCreate(pw, keep, devname){
+  modal(`<h3>Neue Kantine anlegen</h3><p style="margin:0">Im Daten-Repository <b>${esc(OWNER)}/${esc(DATAREPO)}</b> gibt es noch keine Kantinendaten. Soll eine neue, leere Kantine angelegt werden?</p>
+    <label class="f">Kantinen-Passwort wiederholen<input type="password" id="crPw2"><span class="hint">Mindestens 10 Zeichen. Gut aufbewahren – ohne Passwort sind die Daten nicht lesbar.</span></label>
+    <label class="f">Admin-PIN (4–6 Ziffern)<input type="password" id="crPin" inputmode="numeric" maxlength="6"><span class="hint">Sperrt die Verwaltung (Preise, Geld, Abrechnung).</span></label>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="crOk">Anlegen</button></div>`, r=>{
+    r.querySelector("#crOk").onclick=async()=>{
+      if (pw.length<10){ toast("Das Kantinen-Passwort braucht mindestens 10 Zeichen."); return; }
+      if (r.querySelector("#crPw2").value!==pw){ toast("Die Passwörter stimmen nicht überein."); return; }
+      const pin=r.querySelector("#crPin").value.trim(); if (!/^\d{4,6}$/.test(pin)){ toast("Die Admin-PIN braucht 4 bis 6 Ziffern."); return; }
+      r.querySelector("#crOk").disabled=true;
+      try{
+        const key=await crypto.subtle.generateKey({name:"AES-GCM", length:256}, true, ["encrypt","decrypt"]);
+        const raw=new Uint8Array(await crypto.subtle.exportKey("raw", key)); DEK=key; HDR=await newHeader(pw, raw);
+        const st=emptyState(); st.settings={pinHash:await sha(pin)};
+        const res=await ghWrite(DATAREPO, "data.enc", tenc.encode(await encState(st)), null, "Kantine angelegt");
+        REMOTE={sha:res.content.sha, state:st}; PENDING=[];
+        await remember(raw, keep, devname); closeModal(); UI.unlocked=true; UI.unlockAt=Date.now(); startStaff();
+      }catch(e){ toast("Anlegen fehlgeschlagen. Hat der Zugangsschlüssel Schreibrechte?"); r.querySelector("#crOk").disabled=false; }
+    };
+  });
+}
+async function remember(raw, keep, devname){
+  const store = keep ? ls : ss;
+  store.set("kantine.token", TOKEN); store.set("kantine.dek", b64(raw)); ls.set("kantine.devname", devname);
+  if (!keep){ ls.set("kantine.token", null); ls.set("kantine.dek", null); }
+  S.email=devname;
+}
+function startStaff(){
+  S.email = ls.get("kantine.devname") || "Gerät";
+  S.role="team"; S.canEdit=true; S.canWrite=true; S.db=DB; S.assets=assetsAdapter;
+  UI.tlocked = !!(S.settings && S.settings.teamPinHash);
+  rebuild(); UI.tlocked = !!S.settings.teamPinHash;
+  MODE="staff"; setChrome(true); updSync(); route(); syncNow();
+}
+function pwModal(){
+  modal(`<h3>Kantinen-Passwort ändern</h3><p class="muted" style="margin:0">Gilt danach für alle neuen Anmeldungen. Bereits verbundene Geräte bleiben verbunden.</p>
+    <label class="f">Neues Passwort<input type="password" id="pw1" autocomplete="new-password"><span class="hint">Mindestens 10 Zeichen.</span></label>
+    <label class="f">Wiederholen<input type="password" id="pw2" autocomplete="new-password"></label>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="pwSave">Speichern</button></div>`, r=>{
+    r.querySelector("#pwSave").onclick=async()=>{
+      const a=r.querySelector("#pw1").value, b=r.querySelector("#pw2").value;
+      if (a.length<10){ toast("Das Passwort braucht mindestens 10 Zeichen."); return; }
+      if (a!==b){ toast("Die Passwörter stimmen nicht überein."); return; }
+      HDR=await newHeader(a, new Uint8Array(await crypto.subtle.exportKey("raw", DEK))); needWrite=true;
+      closeModal(); await syncNow(); toast(syncErr?"Gespeichert – wird beim nächsten Abgleich übertragen.":"Kantinen-Passwort geändert.");
+    };
+  });
+}
+function logoutDevice(){
+  const n=PENDING.length;
+  confirmBox("Gerät abmelden", n?`<b>Achtung: ${n} Änderungen sind noch nicht abgeglichen</b> und gehen verloren. Erst mit Internet „Jetzt abgleichen“.`:"Danach müssen Zugangsschlüssel und Kantinen-Passwort auf diesem Gerät neu eingegeben werden.", "Abmelden", async()=>{
+    ["kantine.token","kantine.dek","kantine.cache","kantine.pubfp"].forEach(k=>{ ls.set(k,null); ss.set(k,null); });
+    location.hash=""; location.reload();
+  }, true);
+}
+
+// ================= Kameraden-Ansicht (persönlicher Code) =================
+let MV=null, mvCode="";
+function mvBalance(){ return (MV.carry||0) + MV.payments.reduce((s,p)=>s+(p.amount||0),0) - MV.bookings.reduce((s,b)=>s+(b.price||0)*(b.qty||1),0); }
+async function memberLoad(){
+  try{
+    const {path,key}=await memberFile(mvCode);
+    const r=await fetch(`https://raw.githubusercontent.com/${OWNER}/${APPREPO}/konten/${path}?t=${Date.now()}`, {cache:"no-store"});
+    if (r.status===404){ showMsg("Dieser Link ist nicht (mehr) gültig.","Wurde der QR-Code gerade erst erzeugt, dauert es ein paar Minuten, bis das Konto hier erscheint. Sonst wurde ein neuer Code erzeugt – bitte beim Kassenwart einen neuen Zettel holen."); return; }
+    if (!r.ok) throw new Error(r.status);
+    MV=JSON.parse(tdec.decode(await gunz(await unseal(key, await r.json()))));
+  }catch(e){ showMsg("Keine Verbindung.","Bitte Internetverbindung prüfen und die Seite neu laden."); return; }
+  MV.bookings=MV.bookings||[]; MV.payments=MV.payments||[]; MV.events=MV.events||[]; MV.signups=MV.signups||[];
+  memberRender();
+}
+function memberRender(){
+  if (MV.unit) $("#unitName").textContent=MV.unit;
+  document.title="Mein Kantinenkonto";
+  const bal=mvBalance();
+  const tx=[...MV.bookings.map(b=>({ts:b.ts, txt:`${b.qty}× ${esc(b.n)}${b.r?` <span class="pill warn">Runde${MV.rounds?.[b.r]?` · ${esc(MV.rounds[b.r])}`:""}</span>`:""}`, amt:-(b.price*(b.qty||1))})),
+            ...MV.payments.map(p=>({ts:p.ts, txt:esc(p.note||"Gutschrift"), amt:p.amount}))].sort((a,b)=>b.ts-a.ts);
+  const ms0=new Date(); ms0.setDate(1); ms0.setHours(0,0,0,0);
+  const month=MV.bookings.filter(b=>b.ts>=ms0.getTime()).reduce((s,b)=>s+b.price*(b.qty||1),0);
+  const mine=e=>MV.signups.find(s=>s.e===e.id);
+  $("#main").innerHTML=`<div class="stack" style="max-width:720px;margin:0 auto">
+    <div><div class="eyebrow">Mein Kantinenkonto</div><h2>${esc(MV.name)}</h2></div>
+    <div class="panel row between" style="align-items:flex-end">
+      <div><div class="eyebrow">Kontostand</div><div class="bigbal num ${bal<0?"neg":"pos"}">${eur(bal)}</div>
+      <div class="muted">${bal<0?"Wird mit deiner nächsten Aufwandsentschädigung verrechnet.":bal>0?"Guthaben.":"Alles verrechnet."}</div></div>
+      <div class="kpi" style="min-width:160px"><span class="eyebrow">Diesen Monat</span><b class="num">${eur(month)}</b></div></div>
+    ${MV.events.length?`<div class="section"><h3>Nächste Termine</h3>${MV.events.map(e=>{const d=new Date(e.date+"T12:00:00"); const s=mine(e); return `<article class="ev">
+      <div class="date"><div class="w">${d.toLocaleDateString("de-DE",{weekday:"short"})}</div><div class="d">${d.getDate()}</div><div class="m">${d.toLocaleDateString("de-DE",{month:"short"})}</div></div>
+      <div class="body"><div class="row between"><h3>${esc(e.title)}</h3><span class="pill ${e.persons?"ok":"neutral"}">${e.persons} ${e.persons===1?"Person":"Personen"}</span></div>
+      <div class="muted">${e.time?`${esc(e.time)} Uhr · `:""}${e.price?`${eur(e.price)} pro Person`:"Kostenlos"}${e.deadline?` · Anmeldung bis ${dDate(e.deadline)}`:""}</div>
+      ${e.desc?`<div>${esc(e.desc).replace(/\n/g,"<br>")}</div>`:""}
+      ${s?`<div class="pill ok" style="align-self:flex-start">Du bist dabei${s.count>1?` mit ${s.count} Personen`:""}</div>`:`<div class="muted small">Anmelden beim Kantinenteam.</div>`}</div></article>`}).join("")}</div>`:""}
+    <div class="panel section"><h3>Buchungen</h3>
+      ${tx.length?`<ul class="list">${tx.slice(0,80).map(t=>`<li><span class="grow">${t.txt}<br><span class="muted small">${tsStr(t.ts)}</span></span><b class="num ${t.amt<0?"":"pos"}">${eurS(t.amt)}</b></li>`).join("")}</ul>`:`<p class="muted" style="margin:0">Seit dem letzten Abschluss keine Buchungen.</p>`}
+      ${MV.carry?`<p class="muted" style="margin:0">Übertrag aus früheren Abschlüssen: <b class="num">${eurS(MV.carry)}</b></p>`:""}</div>
+    <p class="muted small" style="margin:0">Stand: ${MV.at?tsStr(MV.at):"–"}. Neue Buchungen erscheinen nach einigen Minuten. Diese Seite als Lesezeichen speichern – der Link ist persönlich, bitte nicht weitergeben.</p>
+  </div>`;
+}
+
+// ================= Start =================
+window.__kantine = { syncNow:()=>syncNow(), publish:()=>publishMembers(), pending:()=>PENDING.length };
+async function boot(){
+  const m=location.hash.match(/^#k=([A-Za-z0-9_-]{24,})$/);
+  const ok = OWNER && APPREPO && DATAREPO && !/DEIN/i.test(OWNER+APPREPO+DATAREPO) && window.crypto && crypto.subtle && window.CompressionStream;
+  if (!ok){ setChrome(false); showMsg("Die Kantine ist noch nicht eingerichtet.", window.CompressionStream?"In der Datei config.js fehlen die Namen der Repositories. Siehe ANLEITUNG.md.":"Dieser Browser ist zu alt. Bitte einen aktuellen Chrome, Edge, Firefox oder Safari verwenden."); return; }
+  if (m){ MODE="member"; setChrome(false); mvCode=m[1]; showMsg("Dein Konto wird geladen …",""); await memberLoad();
+    document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="visible") memberLoad(); }); return; }
+  TOKEN = ls.get("kantine.token") || ss.get("kantine.token") || "";
+  const dk = ls.get("kantine.dek") || ss.get("kantine.dek");
+  if (!TOKEN || !dk){ showSetup(); return; }
+  try{ DEK=await importDek(unb64(dk)); }catch(e){ showSetup(); return; }
+  await loadCache();
+  startStaff();
+}
+let raf=0; function schedule(){ if (raf) return; raf=requestAnimationFrame(()=>{ raf=0; render(); }); }
+boot();
+})();
+</script>
+</body>
+</html>
