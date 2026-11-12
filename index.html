@@ -6,7 +6,10 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#c4161c">
-<title>Gerätehaus-Kantine</title>
+<title>Kantine FF Staaken</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="logo.png" id="favicon">
+<link rel="apple-touch-icon" href="logo.png">
 <style>
 @font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(fonts/barlow-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Barlow";font-weight:500;font-display:swap;src:url(fonts/barlow-latin-500-normal.woff2) format("woff2")}
@@ -54,6 +57,9 @@ a{color:inherit}
 
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:12px;padding-block:10px;flex-wrap:wrap}
+.brand .unit small{display:block;font-size:.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin-top:2px}
+.brand .logo{height:40px;width:auto;max-width:72px;object-fit:contain;display:block}
+.login .biglogo{height:96px;width:auto;max-width:60%;object-fit:contain;align-self:center}
 .brand h1{font-family:var(--f-display);font-weight:700;font-size:1.6rem;letter-spacing:.01em;margin:0;line-height:1;text-transform:uppercase}
 .brand .unit{color:var(--muted);font-weight:600;font-size:.95rem}
 .brand .spacer{flex:1}
@@ -226,6 +232,7 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
   .pcard{border:1px dashed #888;padding:8mm 6mm;text-align:center;break-inside:avoid;display:flex;flex-direction:column;gap:2mm;align-items:center}
   .pcard .pn{font-family:var(--f-display);font-weight:700;font-size:15pt;text-transform:uppercase}
   .pcard .pu{font-size:8pt;color:#444}
+  .pcard .plogo{height:12mm;width:auto;object-fit:contain}
   .pcard svg{width:38mm;height:38mm}
   .pcard .pt{font-size:7.5pt;color:#333;line-height:1.3}
   @page{margin:10mm}
@@ -237,7 +244,7 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
 <body>
 <header class="top">
   <div class="gut"><div class="wrap brand">
-    <h1>Kantine</h1><span class="unit" id="unitName">Freiwillige Feuerwehr</span>
+    <img class="logo" id="logo" alt="" hidden><h1>Kantine</h1><span class="unit"><span id="unitName">Freiwillige Feuerwehr Staaken</span><small id="unitSub" hidden></small></span>
     <span class="spacer"></span>
     <span class="wake" id="wake" hidden>Bildschirm bleibt an</span>
     <span class="sync" id="sync"><i class="dot" id="syncDot"></i><span id="syncText">Verbinde …</span></span>
@@ -274,6 +281,14 @@ const DAY = 864e5;
 
 let MODE="boot";
 const CFG = window.KANTINE_CONFIG || {};
+const WEHR = CFG.wehr || "Freiwillige Feuerwehr";
+let LOGO_OK = false;
+(()=>{ const img=document.getElementById("logo"); if (!CFG.logo){ document.getElementById("favicon")?.remove(); return; }
+  img.onload=()=>{ LOGO_OK=true; img.hidden=false; document.querySelectorAll(".biglogo").forEach(x=>{ x.src=img.src; x.hidden=false; }); };
+  img.onerror=()=>{ img.hidden=true; document.getElementById("favicon")?.remove(); };
+  if (CFG.untertitel){ const u=document.getElementById("unitSub"); u.textContent=CFG.untertitel; u.hidden=false; }
+  img.src=CFG.logo; document.getElementById("unitName").textContent=WEHR; document.title="Kantine "+(CFG.kurz||WEHR); })();
+const logoTag = cls => LOGO_OK ? `<img class="${cls}" src="${esc(CFG.logo)}" alt="Logo ${esc(WEHR)}">` : "";
 const ls = { get(k){ try{return localStorage.getItem(k)}catch(e){return null} }, set(k,v){ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v) }catch(e){} } };
 UI.meId = ls.get("kantine.me");
 try{ UI.carts = JSON.parse(ls.get("kantine.carts")||"{}") || {}; }catch(e){ UI.carts={}; }
@@ -432,7 +447,7 @@ function render(){
     a.setAttribute("aria-current", a.dataset.v===UI.view ? "page" : "false");
     if (a.dataset.v==="verwaltung") a.hidden = !S.canEdit;
   });
-  $("#unitName").textContent = S.settings.unit || "Freiwillige Feuerwehr";
+  $("#unitName").textContent = S.settings.unit || WEHR;
   const main = $("#main");
   const keep = {}; main.querySelectorAll("input[id],select[id],textarea[id]").forEach(el => { if (el.type!=="file") keep[el.id] = el.type==="checkbox"?el.checked:el.value; });
   const act = document.activeElement && main.contains(document.activeElement) ? document.activeElement.id : null;
@@ -1571,9 +1586,9 @@ function qrModal(mid){
   });
 }
 function printCards(ids){
-  const unit=S.settings.unit||"Freiwillige Feuerwehr";
+  const unit=S.settings.unit||WEHR;
   let el=document.getElementById("printSheet"); if (!el){ el=document.createElement("div"); el.id="printSheet"; document.body.appendChild(el); }
-  el.innerHTML = ids.filter(id=>S.codes[id]&&S.members[id]).map(id=>`<div class="pcard"><div class="pu">${esc(unit)} · Kantine</div><div class="pn">${esc(S.members[id].name)}</div>${qrSvg(memberLink(S.codes[id]))}<div class="pt">Dein Kantinenkonto: mit der Handykamera scannen und als Lesezeichen speichern.<br>Persönlich – bitte nicht weitergeben.</div></div>`).join("");
+  el.innerHTML = ids.filter(id=>S.codes[id]&&S.members[id]).map(id=>`<div class="pcard">${logoTag("plogo")}<div class="pu">${esc(unit)} · Kantine${CFG.untertitel?`<br>${esc(CFG.untertitel)}`:""}</div><div class="pn">${esc(S.members[id].name)}</div>${qrSvg(memberLink(S.codes[id]))}<div class="pt">Dein Kantinenkonto: mit der Handykamera scannen und als Lesezeichen speichern.<br>Persönlich – bitte nicht weitergeben.</div></div>`).join("");
   setTimeout(()=>{ try{ window.print(); }catch(e){ toast("Drucken ist hier nicht möglich."); } }, 50);
 }
 async function printAll(){
@@ -1588,7 +1603,8 @@ function showMsg(title, text, extra){ $("#main").innerHTML=`<div class="login"><
 function showSetup(msg){
   MODE="login"; setChrome(false);
   $("#main").innerHTML=`<form class="login panel" id="setupForm" autocomplete="off">
-      <div><div class="eyebrow">Gerät verbinden</div><h2>Kantine öffnen</h2></div>
+      <img class="biglogo" src="${esc(CFG.logo||"")}" alt="Logo ${esc(WEHR)}" ${LOGO_OK?"":"hidden"}>
+      <div><div class="eyebrow">${esc(WEHR)} · Gerät verbinden</div><h2>Kantine öffnen</h2></div>
       <p class="muted" style="margin:0">Einmal pro Gerät – z. B. Tablet auf der Wache oder PC zu Hause.</p>
       ${msg?`<div class="note">${esc(msg)}</div>`:""}
       <label class="f">Zugangsschlüssel (GitHub)<input type="password" id="suToken" required placeholder="github_pat_…" autocomplete="off"><span class="hint">Steht in der Anleitung, Schritt 3. Bekommst du vom Kassenwart.</span></label>
