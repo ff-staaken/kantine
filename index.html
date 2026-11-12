@@ -61,6 +61,10 @@ a{color:inherit}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--navy);color:var(--navy-ink)}
 .brand{display:grid;grid-template-columns:1fr auto 1fr;grid-template-areas:"l z r";align-items:center;gap:8px 16px;padding-block:8px}
 .b-left{grid-area:l;display:flex;align-items:center;gap:10px;min-width:0}
+.helpbtn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--muted);background:transparent;color:var(--muted);font:700 .85rem var(--f-body);cursor:pointer;vertical-align:middle;margin-left:6px;padding:0}
+.helpbtn:hover{border-color:var(--red);color:var(--red)}
+.linkbtn{background:none;border:0;padding:0;font:inherit;font-weight:700;color:inherit;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.linkbtn:hover{text-decoration-color:var(--red)}
 .whobtn{background:var(--navy-2);color:var(--navy-ink);border:1px solid var(--navy-muted);border-radius:999px;padding:5px 12px;font-weight:600;font-size:.85rem;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .whobtn:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
 .b-right{grid-area:r;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0;text-align:right}
@@ -302,7 +306,7 @@ const COLS = ["members","products","bookings","payments","events","signups","sho
 const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
 COLS.forEach(c => S[c] = {});
 const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
-  adminTab:"konten", statProd:"", statMeasure:"q", statMonth:null, year:new Date().getFullYear(), cashYear:new Date().getFullYear(), opYear:new Date().getFullYear(), lastAct:Date.now() };
+  adminTab:"start", statProd:"", statMeasure:"q", statMonth:null, year:new Date().getFullYear(), cashYear:new Date().getFullYear(), opYear:new Date().getFullYear(), lastAct:Date.now() };
 const CATS = ["Getränke","Heißgetränke","Essen","Snacks","Sonstiges"];
 const OPKINDS = ["Einsatz","Übung","Dienstabend","Sonstiges"];
 const CASHCATS = ["Kassendifferenz","Barverkauf","Einkauf Kantine","Verpflegung Übungsdienst","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
@@ -538,7 +542,7 @@ function vKiosk(){
         ${rounds.map(r=>`<button class="tile round" data-act="pick" data-key="r:${r.id}"><span class="tag">Runde${r.reason?` · ${esc(r.reason)}`:""}</span>${esc(mName(r.payer))}<span class="sub">${eur(roundTotal(r.id))}</span>${UI.carts["r:"+r.id]?`<span class="pend">offen</span>`:""}</button>`).join("")}
         ${canWrite()?`<button class="tile cash" data-act="pick" data-key="b:"><span class="tag">Gäste</span>Bar bezahlt${UI.carts["b:"]?`<span class="pend">offen</span>`:""}</button><button class="tile addtile" data-act="opnew">+ Einsatz / Übung</button><button class="tile addtile" data-act="roundnew">+ Runde ausgeben</button><button class="tile addtile" data-act="splitnew">+ Essen aufteilen</button>`:""}
       </div></div>
-    <div class="row between"><div><h2>Mitglieder</h2></div>
+    <div class="row between"><div><h2>Mitglieder ${help("kiosk")}</h2></div>
       <div class="row" style="flex:1;min-width:200px;max-width:520px;flex-wrap:nowrap"><input type="search" id="kSearch" placeholder="Suchen" aria-label="Name suchen" value="${esc(UI.search)}">${canWrite()?`<button class="btn ${UI.multi?"primary":""}" data-act="multi" style="flex:none">${UI.multi?"Auswahl beenden":"Mehrere buchen"}</button>`:""}</div></div>
     ${UI.multi?`<div class="note" style="background:var(--surface-2);color:var(--ink)">Namen antippen, die das Gleiche bekommen – dann unten auf „Artikel wählen“.${q?"":` <button class="btn small ghost" data-act="msall">Alle auswählen</button>`}</div>`:""}
     <div class="mgrid ${UI.multi?"multi":""}">${shown.map(m=>UI.multi
@@ -612,14 +616,14 @@ function evCard(e, compact){
     <div class="date"><div class="w">${d.toLocaleDateString("de-DE",{weekday:"short"})}</div><div class="d">${d.getDate()}</div><div class="m">${d.toLocaleDateString("de-DE",{month:"short"})}</div></div>
     <div class="body">
       <div class="row between"><h3>${esc(e.title)}</h3>
-        <span class="row">${e.billed?`<span class="pill neutral">Abgerechnet</span>`:""}${closed&&!past?`<span class="pill warn">Anmeldeschluss vorbei</span>`:""}<span class="pill ${persons?"ok":"neutral"}">${persons} ${persons===1?"Person":"Personen"}</span></span></div>
+        <span class="row">${e.billed||e.split?`<span class="pill neutral">${e.split?"Aufgeteilt":"Abgerechnet"}</span>`:""}${closed&&!past?`<span class="pill warn">Anmeldeschluss vorbei</span>`:""}<span class="pill ${persons?"ok":"neutral"}">${persons} ${persons===1?"Person":"Personen"}</span></span></div>
       <div class="muted">${e.time?`${esc(e.time)} Uhr · `:""}${e.price?`${eur(e.price)} pro Person`:"Kostenlos"}${e.deadline?` · Anmeldung bis ${dDate(e.deadline)}`:""}</div>
       ${e.desc&&!compact?`<div>${esc(e.desc).replace(/\n/g,"<br>")}</div>`:""}
       ${mine?`<div class="pill ok" style="align-self:flex-start">Du bist dabei${mine.count>1?` mit ${mine.count} Personen`:""}</div>`:""}
       <div class="row">
         ${!past&&canWrite()?`<button class="btn small ${mine?"":"primary"}" data-act="signup" data-id="${e.id}">${mine?"Anmeldung ändern":"Anmelden"}</button>`:""}
         ${sus.length?`<button class="btn small ghost" data-act="evtoggle" data-id="${e.id}">${open?"Liste ausblenden":"Wer kommt?"}</button>`:""}
-        ${!compact&&can("events")?`<button class="btn small" data-act="evedit" data-id="${e.id}">Bearbeiten</button>${e.price&&!e.billed&&persons?`<button class="btn small" data-act="evbill" data-id="${e.id}">Kosten auf Konten buchen</button>`:""}`:""}
+        ${!compact&&can("events")?`<button class="btn small" data-act="evedit" data-id="${e.id}">Bearbeiten</button>${e.price&&!e.billed&&!e.split&&persons?`<button class="btn small" data-act="evbill" data-id="${e.id}">Kosten auf Konten buchen</button>`:""}${!e.billed&&!e.split&&persons?`<button class="btn small" data-act="evsplit" data-id="${e.id}">Kosten aufteilen</button>`:""}`:""}
       </div>
       ${open&&sus.length?`<div class="chips">${sus.map(s=>`<span class="chip">${esc(mName(s.m))}${s.count>1?` +${s.count-1}`:""}${s.note?` · <i>${esc(s.note)}</i>`:""}</span>`).join("")}</div>`:""}
     </div></article>`;
@@ -628,7 +632,7 @@ function vTermine(){
   const evs = list("events").sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||"")));
   const up = evs.filter(e=>e.date>=today()), past = evs.filter(e=>e.date<today()).reverse().slice(0,6);
   return `<div class="stack">
-    <div class="row between"><div><h2>Termine</h2></div>
+    <div class="row between"><div><h2>Termine ${help("termine")}</h2></div>
       ${can("events")?`<button class="btn primary" data-act="evnew">Termin anlegen</button>`:""}</div>
     ${roNote()}
     ${up.length?up.map(e=>evCard(e)).join(""):`<div class="empty"><b>Keine anstehenden Termine.</b><span>${S.canEdit?"Leg unter „Termin anlegen“ das nächste Essen oder den nächsten Kameradschaftsabend an.":"Der Kassenwart trägt hier Essen und Veranstaltungen ein, zu denen ihr euch anmeldet."}</span></div>`}
@@ -639,9 +643,11 @@ function vTermine(){
 // ---------- Lager ----------
 function shoppingNeed(){
   return productsActive().filter(p=>p.track!==false && stockState(p)!=="ok").map(p=>{
-    const s=stock(p.id); const need=Math.max(1,(p.min||0)*2-s);
+    const s=Math.max(0,stock(p.id)); const rate=dailyRate(p.id);
+    const need = rate>0 ? Math.max(1, Math.ceil(rate*21) + (p.min||0) - s) : Math.max(1,(p.min||0)*2-s);
     const txt = p.crate>1 ? `ca. ${Math.max(1,Math.ceil(need/p.crate))} ${Math.ceil(need/p.crate)===1?"Kasten":"Kästen"}` : `ca. ${need} Stück`;
-    return {p,s,txt};
+    const hint = rate>0 ? `Verbrauch ca. ${nf1.format(rate*7)} pro Woche, reicht dann ca. 3 Wochen` : "";
+    return {p,s,txt,hint};
   });
 }
 function vLager(){
@@ -654,7 +660,7 @@ function vLager(){
   const adm = adminOpen();
   const pfandVal = pf.reduce((s,p)=>{ const e=empties(p.id); return s + e*p.pfand + (p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0); },0);
   return `<div class="stack">
-    <div class="row between"><div><div class="eyebrow">Kühlschrank &amp; Lager</div><h2>Bestand</h2></div>
+    <div class="row between"><div><div class="eyebrow">Kühlschrank &amp; Lager</div><h2>Bestand ${help("lager")}</h2></div>
       ${tracked.length?`<div class="row"><button class="btn" data-act="inventur">Inventur</button>${pf.length?`<button class="btn" data-act="leergut">Leergut zurückgegeben</button>`:""}<button class="btn primary" data-act="einkauf">Einkauf einbuchen</button></div>`:""}</div>
     ${!ps.length?`<div class="empty"><b>Noch keine Artikel angelegt.</b><span>Sobald es ein Sortiment gibt, siehst du hier, was noch da ist und was nachgekauft werden muss.</span></div>`:`
     <div class="kpis"><div class="kpi"><span class="eyebrow">Nachkaufen</span><b class="num ${need.length?"neg":""}">${need.length}</b><span class="hint">Artikel unter Mindestbestand</span></div>
@@ -668,7 +674,7 @@ function vLager(){
     ${pf.length?`<div class="panel section"><div class="row between"><h3>Leergut &amp; Pfand</h3><span class="muted small">Aus verkauften Flaschen seit der letzten Rückgabe berechnet</span></div>
       <ul class="list">${pf.map(p=>{const e=empties(p.id); return `<li><span class="grow"><b>${esc(p.name)}</b> <span class="muted small">· ${centsIn(p.pfand)} € je Flasche${p.crate>1?`, ${p.crate} Fl. je Kasten${p.crateP?` + ${centsIn(p.crateP)} € Kastenpfand`:""}`:""}</span></span><span class="num">${units(e,p.crate)}</span><b class="num" style="min-width:80px;text-align:right">${eur(e*p.pfand+(p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0))}</b></li>`}).join("")}</ul></div>`:""}`}
     <div class="panel section"><div class="row between"><h3>Einkaufsliste</h3>${need.length||shop.some(i=>!i.done)?`<button class="btn" data-act="shopshare">Für WhatsApp kopieren</button>`:""}</div>
-      ${need.length?`<ul class="list">${need.map(x=>`<li><span class="pill ${stockState(x.p)==="out"?"bad":"warn"}">Automatisch</span><span class="grow"><b>${esc(x.p.name)}</b> <span class="muted">· Bestand ${Math.max(0,x.s)}, Minimum ${x.p.min||0}</span></span><span class="muted">${x.txt}</span></li>`).join("")}</ul>`:""}
+      ${need.length?`<ul class="list">${need.map(x=>`<li><span class="pill ${stockState(x.p)==="out"?"bad":"warn"}">Automatisch</span><span class="grow"><b>${esc(x.p.name)}</b> <span class="muted">· Bestand ${Math.max(0,x.s)}, Minimum ${x.p.min||0}</span></span><span style="text-align:right"><b>${x.txt}</b>${x.hint?`<br><span class="muted small">${x.hint}</span>`:""}</span></li>`).join("")}</ul>`:""}
       ${shop.length?`<ul class="list">${shop.map(i=>`<li><input type="checkbox" id="sh_${i.id}" data-act="shopdone" data-id="${i.id}" ${i.done?"checked":""} ${canWrite()?"":"disabled"}><label for="sh_${i.id}" class="grow" style="${i.done?"text-decoration:line-through;color:var(--muted)":""}">${esc(i.text)}${i.done&&i.by?` <span class="small">– ${esc(i.by)}</span>`:""}</label>${canWrite()?`<button class="btn small ghost" data-act="shopdel" data-id="${i.id}">Entfernen</button>`:""}</li>`).join("")}</ul>`:""}
       ${!need.length&&!shop.length?`<p class="muted" style="margin:0">Alles da. Artikel unter Mindestbestand erscheinen hier automatisch.</p>`:""}
       ${canWrite()?`<form class="row" id="shopForm"><input type="text" id="shopText" placeholder="z. B. Kaffeefilter, Senf, Grillkohle" aria-label="Eintrag für die Einkaufsliste" style="flex:1;min-width:180px"><button class="btn" type="submit">Hinzufügen</button></form>`:""}
@@ -714,7 +720,7 @@ function vStats(){
   const yRounds=list("rounds").filter(r=>new Date(r.ts||0).getFullYear()===Y).length;
   const coffee = yArr.filter(x=>x.cat==="Heißgetränke").reduce((s,x)=>s+x.q,0);
   return `<div class="stack">
-    <div><h2>Verbrauch pro Monat</h2></div>
+    <div><h2>Verbrauch pro Monat ${help("statistik")}</h2></div>
     ${!hasData?`<div class="empty"><b>Noch keine Buchungen.</b></div>`:`
     <div class="row">
       <label class="f" style="flex:1;min-width:200px;max-width:320px">Artikel<select id="statProd"><option value="">Alle Artikel</option>${Object.entries(allP).sort((a,b)=>a[1].localeCompare(b[1],"de")).map(([k,n])=>`<option value="${k}" ${k===pid?"selected":""}>${esc(n)}</option>`).join("")}</select></label>
@@ -751,9 +757,8 @@ function vAdmin(){
     const tabs=adminTabsFor();
     if (!tabs.length) return `<div class="empty"><b>Keine Berechtigung.</b><span>Nur für Kantinenchef und Admin.</span></div>`;
     if (!tabs.some(t=>t[0]===UI.adminTab)) UI.adminTab=tabs[0][0];
-    const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, benutzer:aUsers, abschluss:aClose}[UI.adminTab]||aKonten)();
-    return `<div class="stack"><div class="row between"><div><h2>Verwaltung</h2></div></div>
-      ${can("money")?quarterNote():""}${can("system")?tokenNote(30):""}
+    const body = ({start:aStart, konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, benutzer:aUsers, abschluss:aClose}[UI.adminTab]||aKonten)();
+    return `<div class="stack"><div class="row between"><div><h2>Verwaltung ${help(UI.adminTab)}</h2></div></div>
       <div class="seg" role="tablist">${tabs.map(([k,l])=>`<button data-act="atab" data-tab="${k}" aria-pressed="${UI.adminTab===k}">${l}</button>`).join("")}</div>
       ${body}</div>`;
   }
@@ -761,12 +766,11 @@ function vAdmin(){
   if (!adminOpen()) return `<div class="stack" style="max-width:360px;margin:0 auto;text-align:center"><h2>Verwaltung gesperrt</h2><p class="muted" style="margin:0">PIN des Kassenwarts eingeben.</p>
     <div class="pindots" id="pinDots">${[0,1,2,3,4,5].map(()=>"<i></i>").join("")}</div>
     <div class="pinpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="pin" data-k="${n}">${n}</button>`).join("")}<button data-act="pin" data-k="c" aria-label="Löschen">⌫</button><button data-act="pin" data-k="0">0</button><button data-act="pin" data-k="ok" style="background:var(--red);color:var(--red-ink);border-color:var(--red)">OK</button></div></div>`;
-  const tabs=[["konten","Konten"],["ae","Abzugsliste"],["einsaetze","Einsatzverpflegung"],["kasse","Kassenbuch"],["stamm","Stammdaten"],["protokoll","Protokoll"],["benutzer","Benutzer"],["abschluss","Abschluss & Einstellungen"]];
-  const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, benutzer:aUsers, abschluss:aClose}[UI.adminTab]||aKonten)();
+  const tabs=[["start","Übersicht"],["konten","Konten"],["ae","Abzugsliste"],["einsaetze","Einsatzverpflegung"],["kasse","Kassenbuch"],["stamm","Stammdaten"],["protokoll","Protokoll"],["benutzer","Benutzer"],["abschluss","Abschluss & Einstellungen"]];
+  const body = ({start:aStart, konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, benutzer:aUsers, abschluss:aClose}[UI.adminTab]||aKonten)();
   return `<div class="stack">
-    <div class="row between"><div><h2>Verwaltung</h2></div>${S.settings.pinHash?`<button class="btn" data-act="lock">Sperren</button>`:""}</div>
+    <div class="row between"><div><h2>Verwaltung ${help(UI.adminTab)}</h2></div>${S.settings.pinHash?`<button class="btn" data-act="lock">Sperren</button>`:""}</div>
     ${!S.settings.pinHash?`<div class="note">Noch keine PIN gesetzt: Am Kantinen-Tablet kann jeder die Verwaltung öffnen. Unter „Abschluss &amp; Einstellungen“ eine PIN festlegen.</div>`:""}
-    ${quarterNote()}${tokenNote(30)}
     <div class="seg" role="tablist">${tabs.map(([k,l])=>`<button data-act="atab" data-tab="${k}" aria-pressed="${UI.adminTab===k}">${l}</button>`).join("")}</div>
     ${body}</div>`;
 }
@@ -779,7 +783,7 @@ function aKonten(){
       <label class="row" style="gap:6px;font-weight:600"><input type="checkbox" id="debtOnly" ${UI.debtOnly?"checked":""}> Nur offene</label>
       <button class="btn" data-act="pay">Einzahlung erfassen</button><button class="btn" data-act="stmtall">Kontoauszüge (PDF)</button><button class="btn" data-act="csv">Kontenliste exportieren</button></div></div>
       <div class="tbl-wrap"><table><thead><tr><th>Name</th><th class="r">Kontostand</th><th>Letzte Buchung</th><th></th></tr></thead><tbody>
-      ${rows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td class="r num"><b class="${r.bal<0?"neg":r.bal>0?"pos":""}">${eur(r.bal)}</b></td><td class="muted">${r.last?tsStr(r.last):"–"}</td><td class="r" style="white-space:nowrap"><button class="btn small" data-act="stmt" data-id="${r.id}">Auszug</button> <button class="btn small" data-act="pay" data-id="${r.id}">${r.bal<0?"Ausgleichen":"Einzahlung"}</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">${UI.debtOnly?"Niemand hat offene Beträge.":"Noch keine Mitglieder."}</td></tr>`}
+      ${rows.map(r=>`<tr><td><button class="linkbtn" data-act="mdetail" data-id="${r.id}">${esc(r.name)}</button></td><td class="r num"><b class="${r.bal<0?"neg":r.bal>0?"pos":""}">${eur(r.bal)}</b></td><td class="muted">${r.last?tsStr(r.last):"–"}</td><td class="r" style="white-space:nowrap"><button class="btn small" data-act="stmt" data-id="${r.id}">Auszug</button> <button class="btn small" data-act="pay" data-id="${r.id}">${r.bal<0?"Ausgleichen":"Einzahlung"}</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">${UI.debtOnly?"Niemand hat offene Beträge.":"Noch keine Mitglieder."}</td></tr>`}
       </tbody></table></div></section>`;
 }
 function aOps(){
@@ -1628,7 +1632,7 @@ const can = perm => rank() >= (NEED[perm]||9);
 const userHash = (id, pw) => sha(`user:${id}:${pw}`);
 const activeAdmins = () => Object.entries(S.users||{}).filter(([id,u])=>u.active!==false && u.role==="admin").map(([id])=>id);
 function adminTabsFor(){
-  const all=[["konten","Konten","money"],["ae","Abzugsliste","money"],["einsaetze","Einsatzverpflegung","ops"],["kasse","Kassenbuch","money"],["stamm","Stammdaten","master"],["protokoll","Protokoll","log"],["benutzer","Benutzer","system"],["abschluss","Abschluss & Einstellungen","close"]];
+  const all=[["start","Übersicht","admin"],["konten","Konten","money"],["ae","Abzugsliste","money"],["einsaetze","Einsatzverpflegung","ops"],["kasse","Kassenbuch","money"],["stamm","Stammdaten","master"],["protokoll","Protokoll","log"],["benutzer","Benutzer","system"],["abschluss","Abschluss & Einstellungen","close"]];
   return all.filter(t=>can(t[2]));
 }
 function loginView(){
@@ -1712,57 +1716,61 @@ async function createUser(){
 
 // ---------- Essen aufteilen ----------
 function splitShares(total, n){ const base=Math.floor(total/n), r=total-base*n; return Array.from({length:n},(_,i)=>base+(i<r?1:0)); }
-function splitForm(){
-  const ms=membersActive(); const sel=new Set();
-  modal(`<h3>Essen aufteilen</h3>
-    <p class="muted" style="margin:0">Teilnehmer anklicken, jeder bekommt seinen Anteil aufs Konto.</p>
-    <div class="grid2"><label class="f">Was gab es?<input type="text" id="spText" maxlength="60" placeholder="z. B. Pizza Übungsdienst"></label>
+function splitForm(opt){
+  opt=opt||{}; const pre=opt.weights||{};
+  const ms=membersActive(); const sel=new Map(Object.entries(pre).filter(([m])=>S.members[m]).map(([m,w])=>[m, Math.max(1,w|0)]));
+  modal(`<h3>${opt.eventId?"Kosten aufteilen":"Essen aufteilen"}</h3>
+    <p class="muted" style="margin:0">${opt.eventId?"Die Angemeldeten sind schon ausgewählt, mit Begleitung zahlt man entsprechend mehr.":"Teilnehmer anklicken, jeder bekommt seinen Anteil aufs Konto."}</p>
+    <div class="grid2"><label class="f">Was gab es?<input type="text" id="spText" maxlength="60" placeholder="z. B. Pizza Übungsdienst" value="${esc(opt.text||"")}"></label>
       <label class="f">Gesamtbetrag in €<input type="text" id="spTotal" inputmode="decimal" placeholder="46,50"></label></div>
     <div class="row between"><b>Teilnehmer</b><span class="row"><input type="search" id="spSearch" placeholder="Suchen" style="width:160px;min-height:36px"><button class="btn small" type="button" id="spAll">Alle</button><button class="btn small ghost" type="button" id="spNone">Keine</button></span></div>
-    <div id="spList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;max-height:42vh;overflow:auto;padding:2px">
-      ${ms.map(m=>`<label class="row" style="gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer" data-name="${esc(m.name.toLowerCase())}"><input type="checkbox" data-mid="${m.id}"> ${esc(m.name)}</label>`).join("")}
+    <div id="spList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;max-height:42vh;overflow:auto;padding:2px">
+      ${ms.map(m=>`<label class="row" style="gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;flex-wrap:nowrap" data-name="${esc(m.name.toLowerCase())}"><input type="checkbox" data-mid="${m.id}" ${sel.has(m.id)?"checked":""}> <span class="grow" style="min-width:0">${esc(m.name)}</span><input type="number" min="1" max="10" data-w="${m.id}" value="${sel.get(m.id)||1}" title="Personen" aria-label="Personen ${esc(m.name)}" style="width:54px;min-height:32px;padding:4px 6px" ${sel.has(m.id)?"":"hidden"}></label>`).join("")}
     </div>
     <div class="panel row between" style="padding:10px 14px"><span id="spInfo" class="muted">Noch niemand ausgewählt</span><b id="spShare" class="num" style="font-size:1.3rem"></b></div>
     <label class="row" style="font-weight:600"><input type="checkbox" id="spCash"> Aus der Kantinenkasse bezahlt – als Ausgabe ins Kassenbuch</label>
     <label class="f" id="spFileWrap" hidden>Beleg (Foto oder PDF, optional)<input type="file" id="spFile" accept="image/*,application/pdf" capture="environment"></label>
     <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="spOk" disabled>Aufteilen und buchen</button></div>`, r=>{
     const total=()=>{ const v=parseEur(r.querySelector("#spTotal").value); return v>0?v:0; };
+    const units=()=>[...sel.values()].reduce((a,b)=>a+b,0);
     const upd=()=>{
-      const n=sel.size, t=total(); const ok=n>0 && t>0 && r.querySelector("#spText").value.trim();
-      r.querySelector("#spInfo").textContent = n ? `${n} ${n===1?"Kamerad":"Kameraden"}${t?` · zusammen ${eur(t)}`:""}` : "Noch niemand ausgewählt";
-      if (n && t){ const sh=splitShares(t,n); r.querySelector("#spShare").textContent = sh[0]===sh[n-1] ? `je ${eur(sh[0])}` : `je ${eur(sh[n-1])}–${eur(sh[0])}`; } else r.querySelector("#spShare").textContent="";
+      const n=sel.size, u=units(), t=total(); const ok=n>0 && t>0 && r.querySelector("#spText").value.trim();
+      r.querySelector("#spInfo").textContent = n ? `${n} ${n===1?"Kamerad":"Kameraden"}${u!==n?`, ${u} Personen`:""}${t?` · zusammen ${eur(t)}`:""}` : "Noch niemand ausgewählt";
+      if (n && t){ const sh=splitShares(t,u); r.querySelector("#spShare").textContent = sh[0]===sh[u-1] ? `je Person ${eur(sh[0])}` : `je Person ${eur(sh[u-1])}–${eur(sh[0])}`; } else r.querySelector("#spShare").textContent="";
       r.querySelector("#spOk").disabled=!ok;
-      r.querySelectorAll("#spList label").forEach(l=>{ const c=l.querySelector("input"); l.style.borderColor=c.checked?"var(--red)":""; l.style.background=c.checked?"var(--red-soft)":""; });
+      r.querySelectorAll("#spList label").forEach(l=>{ const c=l.querySelector("input[type=checkbox]"); l.style.borderColor=c.checked?"var(--red)":""; l.style.background=c.checked?"var(--red-soft)":""; l.querySelector("input[data-w]").hidden=!c.checked; });
     };
-    r.querySelectorAll("#spList input").forEach(c=>c.onchange=()=>{ c.checked?sel.add(c.dataset.mid):sel.delete(c.dataset.mid); upd(); });
-    r.querySelector("#spAll").onclick=()=>{ r.querySelectorAll("#spList label").forEach(l=>{ if (l.hidden) return; const c=l.querySelector("input"); c.checked=true; sel.add(c.dataset.mid); }); upd(); };
-    r.querySelector("#spNone").onclick=()=>{ r.querySelectorAll("#spList input").forEach(c=>c.checked=false); sel.clear(); upd(); };
+    r.querySelectorAll("#spList input[type=checkbox]").forEach(c=>c.onchange=()=>{ const w=parseInt(r.querySelector(`input[data-w="${c.dataset.mid}"]`).value)||1; c.checked?sel.set(c.dataset.mid,w):sel.delete(c.dataset.mid); upd(); });
+    r.querySelectorAll("#spList input[data-w]").forEach(i=>{ i.onclick=e=>e.stopPropagation(); i.oninput=()=>{ if (sel.has(i.dataset.w)) sel.set(i.dataset.w, Math.min(10,Math.max(1,parseInt(i.value)||1))); upd(); }; });
+    r.querySelector("#spAll").onclick=()=>{ r.querySelectorAll("#spList label").forEach(l=>{ if (l.hidden) return; const c=l.querySelector("input[type=checkbox]"); c.checked=true; if (!sel.has(c.dataset.mid)) sel.set(c.dataset.mid,1); }); upd(); };
+    r.querySelector("#spNone").onclick=()=>{ r.querySelectorAll("#spList input[type=checkbox]").forEach(c=>c.checked=false); sel.clear(); upd(); };
     r.querySelector("#spSearch").oninput=e=>{ const q=e.target.value.trim().toLowerCase(); r.querySelectorAll("#spList label").forEach(l=>l.hidden=!!q && !l.dataset.name.includes(q)); };
     r.querySelector("#spTotal").oninput=upd; r.querySelector("#spText").oninput=upd;
     r.querySelector("#spCash").onchange=e=>{ r.querySelector("#spFileWrap").hidden=!e.target.checked; };
     r.querySelector("#spOk").onclick=async()=>{
       const btn=r.querySelector("#spOk"); btn.disabled=true; btn.textContent="Buche …";
       const text=r.querySelector("#spText").value.trim().slice(0,60), t=total();
-      const ids=ms.map(m=>m.id).filter(id=>sel.has(id)); const sh=splitShares(t, ids.length);
+      const ids=ms.map(m=>m.id).filter(id=>sel.has(id)); const ws=ids.map(id=>sel.get(id)); const sh=splitShares(t, ws.reduce((a,b)=>a+b,0));
+      let k=0; const amounts=ws.map(w=>{ let s=0; for (let i=0;i<w;i++) s+=sh[k++]; return s; });
       const cash=r.querySelector("#spCash").checked; let receipt="";
       const f=cash && r.querySelector("#spFile").files[0];
       if (f){ try{ receipt=await uploadReceipt(f); }catch(e){ toast("Beleg konnte nicht hochgeladen werden – Ausgabe wird ohne Beleg gebucht."); } }
       const ts=Date.now(); const sid=randId(10); const bids=[]; let cashId=null;
       const ok=await w(async db=>{
-        await db.doc("splits/"+sid).set({text, total:t, date:today(), members:ids, cash, ts, by:who()});
-        for (let i=0;i<ids.length;i++){ const ref=db.collection("bookings").doc(); bids.push(ref.id); await ref.set({m:ids[i], p:"split:"+sid, n:`${text} (Anteil)`, price:sh[i], qty:1, ts, by:who(), dev:S.email||"", split:sid}); }
+        await db.doc("splits/"+sid).set({text, total:t, date:today(), members:ids, weights:ws, cash, ts, by:who(), event:opt.eventId||""});
+        for (let i=0;i<ids.length;i++){ const ref=db.collection("bookings").doc(); bids.push(ref.id); await ref.set({m:ids[i], p:"split:"+sid, n:`${text} (${ws[i]>1?`${ws[i]} Pers.`:"Anteil"})`, price:amounts[i], qty:1, ts, by:who(), dev:S.email||"", split:sid}); }
         if (cash){ const ref=db.collection("cash").doc(); cashId=ref.id; await ref.set({date:today(), type:"out", amount:t, text:`${text} – aufgeteilt auf ${ids.length}`, cat:"Verpflegung Übungsdienst", receipt, ts, by:who()}); }
+        if (opt.eventId && S.events[opt.eventId]){ LOG_MUTE++; try{ await db.doc("events/"+opt.eventId).update({split:sid}); } finally { LOG_MUTE--; } }
       });
       if (!ok){ btn.disabled=false; btn.textContent="Aufteilen und buchen"; return; }
       closeModal(); render();
       toast(`${text}: ${eur(t)} auf ${ids.length} aufgeteilt`, {label:"Rückgängig", fn: async()=>{
-        await w(async db=>{ for (const id of bids) await db.doc("bookings/"+id).delete(); if (cashId) await db.doc("cash/"+cashId).delete(); await db.doc("splits/"+sid).delete(); }, "Aufteilung zurückgenommen");
+        await w(async db=>{ for (const id of bids) await db.doc("bookings/"+id).delete(); if (cashId) await db.doc("cash/"+cashId).delete(); await db.doc("splits/"+sid).delete(); if (opt.eventId && S.events[opt.eventId]){ LOG_MUTE++; try{ await db.doc("events/"+opt.eventId).update({split:""}); } finally { LOG_MUTE--; } } }, "Aufteilung zurückgenommen");
       }});
     };
     upd();
   }, true);
 }
-
 
 // ---------- Kassensturz ----------
 const DENOMS=[[20000,"200 €"],[10000,"100 €"],[5000,"50 €"],[2000,"20 €"],[1000,"10 €"],[500,"5 €"],[200,"2 €"],[100,"1 €"],[50,"50 ct"],[20,"20 ct"],[10,"10 ct"],[5,"5 ct"],[2,"2 ct"],[1,"1 ct"]];
@@ -1806,6 +1814,97 @@ function kassensturzList(){
   </tbody></table></div><div class="actions"><button class="btn primary" data-close>Schließen</button></div>`, null, true);
 }
 
+// ================= Hilfe auf Abruf =================
+const HELP = {
+  kiosk: ["Strichliste", "Namen antippen, Artikel antippen, buchen. „Mehrere buchen“ gibt mehreren Kameraden dasselbe. Über die Kacheln oben bucht ihr Barverkauf an Gäste, Einsätze und Übungen (auf FF/JF Kasse) oder eine Runde. „Essen aufteilen“ verteilt einen Gesamtbetrag auf die Teilnehmer. Stornieren geht bis 15 Minuten nach der Buchung."],
+  termine: ["Termine", "Grillabend, Übungsessen, Kameradschaftsabend. Anmelden kann das Kantinenteam für jeden Kameraden. Nach dem Termin: feste Preise mit „Kosten auf Konten buchen“, eingekauftes oder bestelltes Essen mit „Kosten aufteilen“ – dann zahlt jeder angemeldete Kamerad seinen Anteil, mit Begleitung entsprechend mehr."],
+  lager: ["Lager", "Bestand wird bei jeder Buchung abgezogen. „Einkauf einbuchen“ erhöht ihn, „Inventur“ setzt ihn auf den gezählten Stand. Unter dem Mindestbestand landet ein Artikel automatisch auf der Einkaufsliste – mit einer Menge, die zum Verbrauch der letzten Wochen passt."],
+  statistik: ["Statistik", "Verbrauch pro Monat (antippen für Details) und der Jahresrückblick für die Jahreshauptversammlung. Bewusst ohne Ranglisten pro Person."],
+  start: ["Übersicht", "Hier steht, was gerade ansteht – mit Knopf direkt zur Erledigung. Ist alles erledigt, ist die Liste leer."],
+  konten: ["Konten", "Kontostand jedes Mitglieds. Namen antippen für alle Buchungen, Storno, Einzahlung, Kontoauszug und QR-Code."],
+  ae: ["Abzugsliste", "Zum Auszahlungstermin der Aufwandsentschädigung: Liste erstellen, der Kassiererin geben, nach der Auszahlung buchen. Danach stehen die Konten auf null."],
+  einsaetze: ["Einsatzverpflegung", "Alle Einsätze und Übungen mit dem, was dort verbraucht wurde, und auf welchem Kassenkonto es gebucht ist."],
+  kasse: ["Kassenbuch", "Bargeld der Kantine: Einnahmen und Ausgaben mit Beleg. Barverkäufe, Bareinzahlungen und Einkäufe mit Betrag kommen automatisch. „Kassensturz“ vergleicht das gezählte Geld mit dem Kassenbuch."],
+  stamm: ["Stammdaten", "Mitglieder und Sortiment mit Preisen, Pfand und Mindestbestand. „Saison beendet“ nimmt einen Artikel vorübergehend aus dem Verkauf."],
+  protokoll: ["Protokoll", "„Buchungen“ zeigt, wer wann was für wen gebucht hat. Die übrigen Filter zeigen Änderungen an Preisen, Mitgliedern, Zahlungen, Kasse und Einstellungen."],
+  benutzer: ["Benutzer", "Wer die App bedienen darf und mit welcher Rolle. Jeder meldet sich mit Namen und eigenem Passwort an."],
+  abschluss: ["Abschluss & Einstellungen", "Abschluss fasst die Einzelbuchungen zusammen (einmal im Quartal). Dazu Jahresabschluss als PDF, Datensicherung und – für Admins – Einstellungen und Geräte."]
+};
+const help = k => HELP[k] ? `<button class="helpbtn" type="button" data-act="help" data-k="${k}" aria-label="Hilfe: ${esc(HELP[k][0])}">?</button>` : "";
+function showHelp(k){ const h=HELP[k]; if (!h) return; modal(`<h3>${esc(h[0])}</h3><p style="margin:0">${esc(h[1])}</p><div class="actions"><button class="btn primary" data-close>Verstanden</button></div>`); }
+
+// ================= Verwaltung: Heute zu tun =================
+function todoItems(){
+  const it=[]; const add=(level,text,btn)=>it.push({level,text,btn});
+  const b=(act,label,extra="")=>`<button class="btn small" data-act="${act}" ${extra}>${label}</button>`;
+  if (can("money")){
+    const Q=quarterOf(); const left=daysUntil(isoD(Q.end));
+    if (left<=7) add("warn", `Das ${Q.label} endet ${left===0?"heute":`in ${left} ${left===1?"Tag":"Tagen"}`} – Abzugsliste erstellen.`, b("atab","Zur Abzugsliste",'data-tab="ae"'));
+    const P=quarterOf(new Date(Q.start.getTime()-DAY)); const since=-daysUntil(isoD(Q.start));
+    const done=list("settlements").some(s=>s.date && s.date>=isoD(new Date(P.end.getTime()-21*DAY)));
+    if (since<=21 && !done && membersActive().some(m=>balance(m.id)<0)) add("warn", `Für das ${P.label} ist noch keine Abzugsliste gebucht.`, b("atab","Zur Abzugsliste",'data-tab="ae"'));
+    const Y=new Date().getFullYear(); const miss=list("cash").filter(c=>c.type==="out" && !c.receipt && +String(c.date).slice(0,4)===Y).length;
+    if (miss) add("info", `${miss} ${miss===1?"Ausgabe":"Ausgaben"} ohne Beleg im Kassenbuch.`, b("atab","Zum Kassenbuch",'data-tab="kasse"'));
+    const ks=list("counts").sort((a,c)=>(c.ts||0)-(a.ts||0))[0];
+    if (list("cash").length && (!ks || Date.now()-ks.ts>90*DAY)) add("info", ks?`Letzter Kassensturz vor ${Math.round((Date.now()-ks.ts)/DAY)} Tagen.`:"Noch kein Kassensturz gemacht.", b("kassensturz","Kassensturz"));
+  }
+  if (can("close")){ const lb=S.settings.lastBackup; if (!lb || Date.now()-lb>35*DAY) add("info", lb?`Letzte Sicherung vor ${Math.round((Date.now()-lb)/DAY)} Tagen.`:"Noch keine Sicherung heruntergeladen.", b("backup","Sicherung herunterladen")); }
+  if (can("ops")){
+    list("ops").filter(o=>o.open).forEach(o=>add("info", `${o.kind||"Einsatz"} „${o.title}“ ist noch offen (${eur(opTotals(o.id).total)}).`, b("opend","Beenden",`data-id="${o.id}"`)));
+  }
+  if (can("events")){
+    list("events").filter(e=>e.date<=today() && !e.billed && !e.split && list("signups").some(s=>s.e===e.id)).forEach(e=>add("info", `Termin „${e.title}“ (${dDate(e.date)}) ist noch nicht abgerechnet.`, `${e.price?b("evbill","Kosten buchen",`data-id="${e.id}"`):""} ${b("evsplit","Kosten aufteilen",`data-id="${e.id}"`)}`));
+  }
+  const need=shoppingNeed(); if (need.length) add("info", `${need.length} ${need.length===1?"Artikel":"Artikel"} nachkaufen: ${need.slice(0,4).map(x=>x.p.name).join(", ")}${need.length>4?" …":""}`, `<a class="btn small" href="#lager">Zum Lager</a>`);
+  const neg=productsActive().filter(p=>p.track!==false && stock(p.id)<0); if (neg.length) add("warn", `Bestand prüfen: ${neg.map(p=>p.name).join(", ")}.`, b("inventur","Inventur"));
+  const mh=productsActive().filter(p=>mhdState(p)==="exp"||mhdState(p)==="soon"); if (mh.length) add("warn", `MHD prüfen: ${mh.map(p=>p.name).join(", ")}.`, `<a class="btn small" href="#lager">Zum Lager</a>`);
+  if (can("system")){ const exp=tokenExpiry(); if (exp && daysUntil(exp)<=30) add("bad", `GitHub-Zugangsschlüssel läuft ${daysUntil(exp)<0?"ist abgelaufen":`in ${daysUntil(exp)} Tagen ab`}.`, b("atab","Einstellungen",'data-tab="abschluss"')); }
+  if (syncErr && PENDING.length) add("bad", `${PENDING.length} Änderungen sind noch nicht abgeglichen (${syncErr}).`, b("syncnow","Jetzt abgleichen"));
+  return it;
+}
+function aStart(){
+  const it=todoItems();
+  return `<div class="row between"><h3>Heute zu tun ${help("start")}</h3></div>
+    ${it.length?`<ul class="list panel" style="padding:4px 16px">${it.map(x=>`<li><span class="pill ${x.level==="bad"?"bad":x.level==="warn"?"warn":"neutral"}">${x.level==="bad"?"Dringend":x.level==="warn"?"Bald":"Offen"}</span><span class="grow">${esc(x.text)}</span><span class="row">${x.btn}</span></li>`).join("")}</ul>`
+      :`<div class="empty"><b>Alles erledigt. Gut Schlauch!</b></div>`}`;
+}
+
+// ================= Mitglied-Detailseite =================
+function memberDetail(mid){
+  const m=S.members[mid]; if (!m) return;
+  const bal=balance(mid);
+  const items=[...list("bookings").filter(b=>b.m===mid).map(b=>({k:"b", id:b.id, ts:b.ts, text:`${b.qty}× ${b.n}${b.o?` (${S.ops[b.o]?.title||"Einsatz"})`:""}${b.r?` (Runde)`:""}`, amt:-(b.price*(b.qty||1)), by:b.by})),
+               ...list("payments").filter(p=>p.m===mid).map(p=>({k:"p", ts:p.ts, text:p.note||"Gutschrift", amt:p.amount}))].sort((a,b)=>b.ts-a.ts);
+  const late = can("money");
+  modal(`<div class="row between"><h3>${esc(m.name)}</h3><b class="num ${bal<0?"neg":bal>0?"pos":""}" style="font-family:var(--f-display);font-size:1.8rem">${eur(bal)}</b></div>
+    <div class="row">${can("money")?`<button class="btn small" data-md="pay">${bal<0?"Ausgleichen":"Einzahlung"}</button><button class="btn small" data-md="stmt">Kontoauszug (PDF)</button>`:""}${can("master")?`<button class="btn small" data-md="qr">QR-Code</button><button class="btn small" data-md="edit">Bearbeiten</button>`:""}</div>
+    ${items.length?`<div class="tbl-wrap"><table style="min-width:460px"><thead><tr><th>Zeitpunkt</th><th>Buchung</th><th class="r">Betrag</th><th></th></tr></thead><tbody>
+      ${items.map(x=>{ const recent=Date.now()-(x.ts||0)<15*60*1000; const canSt=x.k==="b" && (late || recent);
+        return `<tr><td class="num" style="white-space:nowrap">${tsStr(x.ts)}</td><td>${esc(x.text)}${x.by?`<br><span class="muted small">${esc(x.by)}</span>`:""}</td><td class="r num ${x.amt<0?"":"pos"}">${eurS(x.amt)}</td><td class="r">${canSt?`<button class="btn small" data-md="storno" data-bid="${x.id}">Storno</button>`:""}</td></tr>`; }).join("")}
+    </tbody></table></div>`:`<p class="muted" style="margin:0">Seit dem letzten Abschluss keine Buchungen.</p>`}
+    ${m.carry?`<p class="muted small" style="margin:0">Übertrag aus früheren Abschlüssen: <b class="num">${eurS(m.carry)}</b></p>`:""}
+    <div class="actions"><button class="btn primary" data-close>Schließen</button></div>`, r=>{
+    r.querySelectorAll("[data-md]").forEach(btn=>btn.onclick=async()=>{
+      const a=btn.dataset.md;
+      if (a==="pay") paymentForm(mid);
+      else if (a==="stmt") statementModal(mid);
+      else if (a==="qr") qrModal(mid);
+      else if (a==="edit") memberForm(mid);
+      else if (a==="storno"){ const bid=btn.dataset.bid, b=S.bookings[bid]; if (!b) return;
+        if (btn.dataset.armed!=="1"){ btn.dataset.armed="1"; btn.textContent="Wirklich?"; btn.classList.add("danger"); return; }
+        if (await w(db=>db.doc("bookings/"+bid).delete(), `Storniert: ${b.qty}× ${b.n}`)) memberDetail(mid); }
+    });
+  }, true);
+}
+
+// ================= Bestellvorschlag =================
+function dailyRate(pid){
+  const now=new Date(); const curYm=ymOf(now.getTime()); const prev=new Date(now.getFullYear(), now.getMonth()-1, 15); const prevYm=ymOf(prev.getTime());
+  const agg=monthAgg(); const q=ym=>((agg[ym]||{})[pid]||{}).q||0;
+  const days = now.getDate() + new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  return (q(curYm)+q(prevYm))/days;
+}
+
 // ---------- Event wiring ----------
 document.addEventListener("click", async ev => {
   UI.lastAct=Date.now();
@@ -1843,6 +1942,9 @@ document.addEventListener("click", async ev => {
       saveFile(`Einsatzverpflegung-${Y}.csv`, csv(["Datum","Art","Stichwort","Artikel","Menge","Betrag EUR","Summe EUR"], rows)); break; }
     case "roundnew": roundForm(); break;
     case "splitnew": splitForm(); break;
+    case "evsplit": { const e=S.events[id]; if (!e) break; const wts={}; list("signups").filter(x=>x.e===id && S.members[x.m]).forEach(x=>{ wts[x.m]=x.count||1; }); splitForm({text:e.title, weights:wts, eventId:id}); break; }
+    case "help": showHelp(t.dataset.k); break;
+    case "mdetail": memberDetail(id); break;
     case "roundend": { const r=S.rounds[id]; confirmBox("Runde beenden", `Die Runde von <b>${esc(mName(r.payer))}</b> kostet <b>${eur(roundTotal(id))}</b>. Alles ist bereits auf ihr Konto gebucht. Runde jetzt schließen?`.replace("ihr Konto","das Konto"), "Runde beenden", async()=>{ if (await w(db=>db.doc("rounds/"+id).update({open:false}),"Runde beendet – danke fürs Ausgeben!")){ setCart("r:"+id,{}); UI.sel=null; render(); } }); break; }
     case "signup": signupForm(id); break;
     case "evtoggle": UI.openEvent = UI.openEvent===id?null:id; render(); break;

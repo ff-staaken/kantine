@@ -93,6 +93,11 @@ Ist eine Team-PIN gesetzt, sperrt sich die App nach 10 Minuten ohne Bedienung; e
 
 ## Im Alltag
 
+- **Übersicht:** Die Verwaltung öffnet mit „Heute zu tun“ – z. B. nachkaufen, Abzugsliste fällig, Belege fehlen, Sicherung, offene Einsätze, Termine abrechnen – jeweils mit Knopf zur Erledigung.
+- **Mitglied-Detailseite:** Verwaltung → Konten → Namen antippen: alle Buchungen, Storno (Kantinenchef/Admin auch nach 15 Minuten), Einzahlung, Kontoauszug, QR-Code.
+- **Hilfe:** Das „?“ neben einer Überschrift erklärt die Seite in zwei, drei Sätzen.
+- **Termin abrechnen:** Bei einem Termin mit Anmeldungen „Kosten aufteilen“ – die Angemeldeten sind schon ausgewählt, wer mit Begleitung kommt, zahlt entsprechend mehr.
+- **Bestellvorschlag:** Die Einkaufsliste schlägt Mengen nach dem Verbrauch der letzten Wochen vor (reicht ca. 3 Wochen).
 - **Mehrere auf einmal buchen:** Strichliste → **Mehrere buchen** → Namen antippen → **Artikel wählen** → **Für alle buchen**. Jede Person bekommt dieselben Artikel auf ihr Konto.
 - **Einsatz / Übung verpflegen:** Strichliste → **+ Einsatz / Übung** → Art, Stichwort und **Kosten auf Konto** wählen (FF Kasse oder JF Kasse; angeboten werden alle Mitglieder mit „Kasse“ im Namen). Alles, was danach beim Einsatz gebucht wird, geht auf dieses Konto und erscheint zusätzlich unter Verwaltung → Einsatzverpflegung.
 - **Essen aufteilen (z. B. Pizza zum Übungsdienst):** Strichliste → **+ Essen aufteilen** → was es gab und Gesamtbetrag eingeben → Teilnehmer anklicken → **Aufteilen und buchen**. Jeder bekommt seinen Anteil (cent-genau) aufs Konto. Häkchen „Aus der Kantinenkasse bezahlt“ trägt den Betrag als Ausgabe ins Kassenbuch ein, optional mit Beleg-Foto.
