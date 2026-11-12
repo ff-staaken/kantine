@@ -775,8 +775,7 @@ function aKonten(){
   const sumPos = rows.filter(r=>r.bal>0).reduce((s,r)=>s+r.bal,0), sumNeg = rows.filter(r=>r.bal<0).reduce((s,r)=>s+r.bal,0);
   if (UI.debtOnly) rows = rows.filter(r=>r.bal<0);
   rows.sort((a,b)=>a.bal-b.bal);
-  return `<div class="kpis" style="max-width:340px"><div class="kpi"><span class="eyebrow">Kassenstand</span><b class="num">${eur(cashBalance())}</b><span class="hint">laut Kassenbuch</span></div></div>
-    <section class="section"><div class="row between"><h3>Konten</h3><div class="row">
+  return `<section class="section"><div class="row between"><h3>Konten</h3><div class="row">
       <label class="row" style="gap:6px;font-weight:600"><input type="checkbox" id="debtOnly" ${UI.debtOnly?"checked":""}> Nur offene</label>
       <button class="btn" data-act="pay">Einzahlung erfassen</button><button class="btn" data-act="stmtall">Kontoauszüge (PDF)</button><button class="btn" data-act="csv">Kontenliste exportieren</button></div></div>
       <div class="tbl-wrap"><table><thead><tr><th>Name</th><th class="r">Kontostand</th><th>Letzte Buchung</th><th></th></tr></thead><tbody>
