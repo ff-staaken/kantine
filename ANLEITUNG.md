@@ -104,6 +104,29 @@ Ist eine Team-PIN gesetzt, sperrt sich die App nach 10 Minuten ohne Bedienung; e
 
 ---
 
+## Benutzer und Rollen (empfohlen)
+
+Statt gemeinsamer PINs meldet sich jede Person mit **Namen und eigenem Passwort** an. Dann steht bei jeder Buchung, jedem Storno und jeder Änderung, wer es war.
+
+| Rolle | Darf |
+|---|---|
+| **Admin** | alles, auch Benutzer verwalten, Einstellungen, Sicherung einspielen |
+| **Kantinenchef** | Verwaltung: Konten, Abzugsliste, Kassenbuch, Preise, Mitglieder, Einsatzverpflegung, Protokoll, Abschluss, PDFs |
+| **HBM** | wie Kantinenteam, zusätzlich Termine anlegen und abrechnen, Einsatzverpflegung verwalten |
+| **Kantinenteam** | buchen, bis 15 Minuten stornieren, Barverkauf, Einsätze und Runden, Einkauf und Inventur, Einkaufsliste |
+
+**Einrichten:** Verwaltung (mit Admin-PIN) → **Benutzer** → zuerst dich selbst als **Admin** anlegen. Ab dann gibt es die Anmeldung mit Namen und Passwort; Team-PIN und Admin-PIN werden nicht mehr verwendet. Danach alle weiteren Personen mit Rolle und erstem Passwort anlegen.
+
+- **Anmelden:** Namen antippen, Passwort eingeben. Nach 10 Minuten ohne Bedienung meldet die App automatisch ab.
+- **Abmelden / eigenes Passwort ändern:** oben rechts auf den eigenen Namen tippen.
+- **Passwort vergessen:** Ein Admin setzt unter Benutzer → „Passwort neu“ ein neues.
+- **Person ausgeschieden:** Unter Benutzer → „Deaktivieren“. Ihre bisherigen Buchungen bleiben mit Namen erhalten.
+- **Wer hat was gebucht:** Verwaltung → Protokoll → **Buchungen**, Filter „Gebucht von“. Auch im Export „Alle Buchungen“ steht, wer gebucht hat.
+
+Die Benutzer-Passwörter regeln, wer in der App was darf. Den Zugang zu den Daten selbst schützen weiterhin Zugangsschlüssel und Kantinen-Passwort (pro Gerät einmal).
+
+---
+
 ## Gerät verloren oder Person scheidet aus
 
 1. GitHub → Developer settings → Fine-grained tokens → den alten Schlüssel **löschen** und einen neuen erzeugen (Schritt 3).

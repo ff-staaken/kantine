@@ -61,6 +61,8 @@ a{color:inherit}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--navy);color:var(--navy-ink)}
 .brand{display:grid;grid-template-columns:1fr auto 1fr;grid-template-areas:"l z r";align-items:center;gap:8px 16px;padding-block:8px}
 .b-left{grid-area:l;display:flex;align-items:center;gap:10px;min-width:0}
+.whobtn{background:var(--navy-2);color:var(--navy-ink);border:1px solid var(--navy-muted);border-radius:999px;padding:5px 12px;font-weight:600;font-size:.85rem;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.whobtn:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
 .b-right{grid-area:r;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0;text-align:right}
 .brand h1{grid-area:z;justify-self:center}
 @media (max-width:760px){.brand{grid-template-columns:1fr auto;grid-template-areas:"z z" "l r"}.brand .zep{height:58px}}
@@ -275,7 +277,7 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
       <path d="M70 15 V57 M110 12.5 V59.5 M162 12.5 V59.5 M202 15 V57" stroke="#d5d8de" stroke-width="2"/>
       <text x="138" y="47" text-anchor="middle" font-family="'Barlow Condensed','Arial Narrow',Arial,sans-serif" font-weight="700" font-size="33" letter-spacing="2" fill="#0e1014">KANTINE</text>
     </svg></h1>
-    <div class="b-right"><span class="wake" id="wake" hidden>Bildschirm bleibt an</span>
+    <div class="b-right"><span id="whoBox" hidden></span><span class="wake" id="wake" hidden>Bildschirm bleibt an</span>
     <span class="sync" id="sync"><i class="dot" id="syncDot"></i><span id="syncText">Verbinde …</span></span></div>
   </div>
   <div class="wrap"><nav class="tabs" id="tabs" aria-label="Bereiche">
@@ -296,7 +298,7 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
 (() => {
 "use strict";
 // ================= State =================
-const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log"];
+const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users"];
 const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
 COLS.forEach(c => S[c] = {});
 const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
@@ -466,7 +468,8 @@ async function copyText(text, title){
 // ================= Render =================
 const canWrite = () => !S.readOnly && S.canWrite !== false && !!S.db;
 const isAdmin = () => S.canEdit && !S.readOnly;
-function adminOpen(){
+function adminOpen(){ return usersOn() ? can("money") : adminOpenLegacy(); }
+function adminOpenLegacy(){
   if (!isAdmin()) return false;
   if (!S.settings.pinHash) return true;
   if (UI.unlocked && Date.now()-UI.unlockAt < 15*60*1000) return true;
@@ -476,7 +479,7 @@ function adminOpen(){
 function render(){
   document.querySelectorAll("#tabs a").forEach(a => {
     a.setAttribute("aria-current", a.dataset.v===UI.view ? "page" : "false");
-    if (a.dataset.v==="verwaltung") a.hidden = !S.canEdit;
+    if (a.dataset.v==="verwaltung") a.hidden = usersOn() ? !can("admin") : !S.canEdit;
   });
   $("#unitName").textContent = S.settings.unit || WEHR;
   const main = $("#main");
@@ -485,7 +488,9 @@ function render(){
   let sel=null; try{ if (act) sel=[document.activeElement.selectionStart, document.activeElement.selectionEnd]; }catch(e){}
   let html;
   if (MODE!=="staff") return;
-  if (S.settings.teamPinHash && UI.tlocked){
+  whoBox();
+  if (usersOn() && !curUser() && S.loaded.size >= COLS.length+1){ main.innerHTML=loginView(); const f=$("#ulPw"); if (f) f.focus(); return; }
+  if (!usersOn() && S.settings.teamPinHash && UI.tlocked){
     main.innerHTML=`<div class="stack" style="max-width:360px;margin:0 auto;text-align:center"><h2>Kantine gesperrt</h2><p class="muted" style="margin:0">Team-PIN oder Admin-PIN eingeben.</p>
     <div class="pindots" id="tpinDots">${[0,1,2,3,4,5].map(()=>"<i></i>").join("")}</div>
     <div class="pinpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="tpin" data-k="${n}">${n}</button>`).join("")}<button data-act="tpin" data-k="c" aria-label="Löschen">⌫</button><button data-act="tpin" data-k="0">0</button><button data-act="tpin" data-k="ok" style="background:var(--red);color:var(--red-ink);border-color:var(--red)">OK</button></div></div>`;
@@ -611,7 +616,7 @@ function evCard(e, compact){
       <div class="row">
         ${!past&&canWrite()?`<button class="btn small ${mine?"":"primary"}" data-act="signup" data-id="${e.id}">${mine?"Anmeldung ändern":"Anmelden"}</button>`:""}
         ${sus.length?`<button class="btn small ghost" data-act="evtoggle" data-id="${e.id}">${open?"Liste ausblenden":"Wer kommt?"}</button>`:""}
-        ${!compact&&adminOpen()?`<button class="btn small" data-act="evedit" data-id="${e.id}">Bearbeiten</button>${e.price&&!e.billed&&persons?`<button class="btn small" data-act="evbill" data-id="${e.id}">Kosten auf Konten buchen</button>`:""}`:""}
+        ${!compact&&can("events")?`<button class="btn small" data-act="evedit" data-id="${e.id}">Bearbeiten</button>${e.price&&!e.billed&&persons?`<button class="btn small" data-act="evbill" data-id="${e.id}">Kosten auf Konten buchen</button>`:""}`:""}
       </div>
       ${open&&sus.length?`<div class="chips">${sus.map(s=>`<span class="chip">${esc(mName(s.m))}${s.count>1?` +${s.count-1}`:""}${s.note?` · <i>${esc(s.note)}</i>`:""}</span>`).join("")}</div>`:""}
     </div></article>`;
@@ -621,7 +626,7 @@ function vTermine(){
   const up = evs.filter(e=>e.date>=today()), past = evs.filter(e=>e.date<today()).reverse().slice(0,6);
   return `<div class="stack">
     <div class="row between"><div><div class="eyebrow">Grillabend, Übungsessen, Kameradschaftsabend</div><h2>Termine</h2></div>
-      ${adminOpen()?`<button class="btn primary" data-act="evnew">Termin anlegen</button>`:""}</div>
+      ${can("events")?`<button class="btn primary" data-act="evnew">Termin anlegen</button>`:""}</div>
     ${roNote()}
     ${up.length?up.map(e=>evCard(e)).join(""):`<div class="empty"><b>Keine anstehenden Termine.</b><span>${S.canEdit?"Leg unter „Termin anlegen“ das nächste Essen oder den nächsten Kameradschaftsabend an.":"Der Kassenwart trägt hier Essen und Veranstaltungen ein, zu denen ihr euch anmeldet."}</span></div>`}
     ${past.length?`<button class="btn ghost" data-act="pasttoggle" style="align-self:flex-start">${UI.showPast?"Vergangene ausblenden":`Vergangene Termine (${past.length})`}</button>${UI.showPast?past.map(e=>evCard(e)).join(""):""}`:""}
@@ -739,12 +744,22 @@ function vStats(){
 
 // ---------- Verwaltung ----------
 function vAdmin(){
+  if (usersOn()){
+    const tabs=adminTabsFor();
+    if (!tabs.length) return `<div class="empty"><b>Keine Berechtigung.</b><span>Die Verwaltung ist für Kantinenchef und Admin. Melde dich oben rechts ab und mit einem passenden Benutzer an.</span></div>`;
+    if (!tabs.some(t=>t[0]===UI.adminTab)) UI.adminTab=tabs[0][0];
+    const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, benutzer:aUsers, abschluss:aClose}[UI.adminTab]||aKonten)();
+    return `<div class="stack"><div class="row between"><div><div class="eyebrow">${esc(ROLES[curUser().role].label)}</div><h2>Verwaltung</h2></div></div>
+      ${can("money")?quarterNote():""}${can("system")?tokenNote(30):""}
+      <div class="seg" role="tablist">${tabs.map(([k,l])=>`<button data-act="atab" data-tab="${k}" aria-pressed="${UI.adminTab===k}">${l}</button>`).join("")}</div>
+      ${body}</div>`;
+  }
   if (!S.canEdit) return `<div class="empty"><b>Nur für den Kassenwart.</b><span>Die Verwaltung ist nur mit einem freigeschalteten Zugang sichtbar.</span></div>`;
   if (!adminOpen()) return `<div class="stack" style="max-width:360px;margin:0 auto;text-align:center"><h2>Verwaltung gesperrt</h2><p class="muted" style="margin:0">PIN des Kassenwarts eingeben.</p>
     <div class="pindots" id="pinDots">${[0,1,2,3,4,5].map(()=>"<i></i>").join("")}</div>
     <div class="pinpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="pin" data-k="${n}">${n}</button>`).join("")}<button data-act="pin" data-k="c" aria-label="Löschen">⌫</button><button data-act="pin" data-k="0">0</button><button data-act="pin" data-k="ok" style="background:var(--red);color:var(--red-ink);border-color:var(--red)">OK</button></div></div>`;
-  const tabs=[["konten","Konten"],["ae","Abzugsliste"],["einsaetze","Einsatzverpflegung"],["kasse","Kassenbuch"],["stamm","Stammdaten"],["protokoll","Protokoll"],["abschluss","Abschluss & Einstellungen"]];
-  const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, abschluss:aClose}[UI.adminTab]||aKonten)();
+  const tabs=[["konten","Konten"],["ae","Abzugsliste"],["einsaetze","Einsatzverpflegung"],["kasse","Kassenbuch"],["stamm","Stammdaten"],["protokoll","Protokoll"],["benutzer","Benutzer"],["abschluss","Abschluss & Einstellungen"]];
+  const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, benutzer:aUsers, abschluss:aClose}[UI.adminTab]||aKonten)();
   return `<div class="stack">
     <div class="row between"><div><div class="eyebrow">Kassenwart</div><h2>Verwaltung</h2></div>${S.settings.pinHash?`<button class="btn" data-act="lock">Sperren</button>`:""}</div>
     ${!S.settings.pinHash?`<div class="note">Noch keine PIN gesetzt: Am Kantinen-Tablet kann jeder die Verwaltung öffnen. Unter „Abschluss &amp; Einstellungen“ eine PIN festlegen.</div>`:""}
@@ -903,9 +918,9 @@ function aClose(){
       <p class="muted small" style="margin:0">Tipp: Den Jahresabschluss vor dem letzten Abschluss des Jahres erstellen, dann sind alle Einzelbuchungen noch enthalten.</p></div></section>
     <section class="section"><h3>Datensicherung</h3>
       <div class="panel stack"><p style="margin:0">Lade regelmäßig – z. B. nach jedem Abschluss – eine komplette Sicherung herunter und bewahre sie auf einem USB-Stick oder im Vereins-Laufwerk auf. Die Datei enthält alle Kantinendaten und die persönlichen Codes; bitte vertraulich behandeln.</p>
-      <div class="row"><button class="btn" data-act="backup">Sicherung herunterladen</button>${canWrite()?`<label class="btn" for="restoreFile">Sicherung wiederherstellen …</label><input type="file" id="restoreFile" accept="application/json,.json" hidden>`:""}</div>
+      <div class="row"><button class="btn" data-act="backup">Sicherung herunterladen</button>${can("system")?`<label class="btn" for="restoreFile">Sicherung wiederherstellen …</label><input type="file" id="restoreFile" accept="application/json,.json" hidden>`:""}</div>
       ${S.settings.lastBackup?`<p class="muted small" style="margin:0">Letzte Sicherung: ${tsStr(S.settings.lastBackup)}</p>`:`<p class="muted small" style="margin:0">Noch keine Sicherung heruntergeladen.</p>`}</div></section>
-    <section class="section"><h3>Einstellungen</h3>
+    ${can("system")?`<section class="section"><h3>Einstellungen</h3>
       <form class="panel grid2" id="setForm"><label class="f">Name der Wehr<input type="text" id="setUnit" value="${esc(S.settings.unit||"")}" placeholder="z. B. FF Musterdorf"></label>
       <label class="f">Admin-PIN<input type="password" id="setPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.pinHash?"Gesetzt – neue eingeben zum Ändern":"4 bis 6 Ziffern"}"><span class="hint">Sperrt die Verwaltung am gemeinsamen Tablet.</span></label>
       <label class="f">Team-PIN<input type="password" id="setTPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.teamPinHash?"Gesetzt – neue eingeben zum Ändern":"optional, 4 bis 6 Ziffern"}"><span class="hint">Für Kantinenteam und HBM. Sperrt die App nach 10 Minuten ohne Bedienung.</span></label>
@@ -914,7 +929,7 @@ function aClose(){
       <div class="panel stack"><div class="row between"><span>Dieses Gerät: <b>${esc(S.email||"")}</b></span><span class="muted small">${esc(syncLabel())}</span></div>
       <form class="row" id="tokForm"><label class="f" style="width:200px">Zugangsschlüssel gültig bis<input type="date" id="tokExp" value="${esc(tokenExpiry())}"></label><button class="btn" type="submit" style="align-self:flex-end">Speichern</button><span class="hint" style="align-self:flex-end">Steht bei GitHub beim Schlüssel. 30 Tage vorher erscheint ein Hinweis.</span></form>
       <div class="row"><button class="btn" data-act="syncnow">Jetzt abgleichen</button><button class="btn" data-act="pwchange">Kantinen-Passwort ändern</button><button class="btn danger" data-act="logout">Gerät abmelden</button></div>
-      <p class="muted small" style="margin:0">Weiteres Gerät, z. B. der PC zu Hause: Adresse der Kantine öffnen, Zugangsschlüssel und Kantinen-Passwort eingeben. Ein verlorenes Gerät sperrst du, indem du in GitHub einen neuen Zugangsschlüssel erzeugst und den alten löschst (siehe Anleitung).</p></div></section>`;
+      <p class="muted small" style="margin:0">Weiteres Gerät, z. B. der PC zu Hause: Adresse der Kantine öffnen, Zugangsschlüssel und Kantinen-Passwort eingeben. Ein verlorenes Gerät sperrst du, indem du in GitHub einen neuen Zugangsschlüssel erzeugst und den alten löschst (siehe Anleitung).</p></div></section>`:""}`;
 }
 
 // ================= Actions =================
@@ -931,17 +946,17 @@ async function bookCart(paid){
   const desc = lines.map(([pid,q])=>`${q}× ${S.products[pid].name}`).join(", ");
   const ok = await w(async db=>{
     for (const base of bases) for (const [pid,q] of lines){ const p=S.products[pid]; const ref=db.collection("bookings").doc(); ids.push(ref.id);
-      await ref.set({...base, by:S.email||"", p:pid, n:p.name, price:p.price, qty:q, ts}); }
-    if (t.t==="b"){ const ref=db.collection("cash").doc(); cashId=ref.id; await ref.set({date:today(), type:"in", amount:per, text:`Barverkauf: ${desc}`.slice(0,100), cat:"Barverkauf", receipt:"", ts, by:S.email||""}); }
+      await ref.set({...base, by:who(), dev:S.email||"", p:pid, n:p.name, price:p.price, qty:q, ts}); }
+    if (t.t==="b"){ const ref=db.collection("cash").doc(); cashId=ref.id; await ref.set({date:today(), type:"in", amount:per, text:`Barverkauf: ${desc}`.slice(0,100), cat:"Barverkauf", receipt:"", ts, by:who()}); }
   });
   if (!ok) return;
   const total = per*bases.length;
-  const who = t.t==="m"?t.label : t.t==="o"?t.label : t.t==="b"?"Barverkauf" : t.t==="x"?`${t.ids.length} Mitglieder` : `die Runde von ${mName(t.r.payer)}`;
+  const target_ = t.t==="m"?t.label : t.t==="o"?t.label : t.t==="b"?"Barverkauf" : t.t==="x"?`${t.ids.length} Mitglieder` : `die Runde von ${mName(t.r.payer)}`;
   setCart(t.key,{});
   if (t.t==="m" || t.t==="x"){ UI.sel=null; UI.search=""; }
   if (t.t==="x"){ UI.multi=false; UI.msel=[]; }
   render(); window.scrollTo({top:0});
-  toast(`${desc} ${t.t==="b"?"bar kassiert":`für ${who} gebucht`} · ${eur(total)}`, {label:"Rückgängig", fn: async()=>{
+  toast(`${desc} ${t.t==="b"?"bar kassiert":`für ${target_} gebucht`} · ${eur(total)}`, {label:"Rückgängig", fn: async()=>{
     await w(async db=>{ for (const id of ids) await db.doc("bookings/"+id).delete(); if (cashId) await db.doc("cash/"+cashId).delete(); }, "Buchung zurückgenommen");
   }});
 }
@@ -972,7 +987,7 @@ function opForm(id){
       if (!data.title){ toast("Bitte ein Stichwort eingeben."); return; }
       if (id){ if (await w(db=>db.doc("ops/"+id).update(data),"Gespeichert")) closeModal(); return; }
       const ref=S.db.collection("ops").doc();
-      if (await w(()=>ref.set({...data,open:true,settled:false,ts:Date.now(),by:S.email||""}), `${data.kind} „${data.title}“ gestartet`)){ closeModal(); if (UI.view==="kiosk"){ UI.sel="o:"+ref.id; } render(); }
+      if (await w(()=>ref.set({...data,open:true,settled:false,ts:Date.now(),by:who()}), `${data.kind} „${data.title}“ gestartet`)){ closeModal(); if (UI.view==="kiosk"){ UI.sel="o:"+ref.id; } render(); }
     };
     const del=r.querySelector("#oDel"); if (del) del.onclick=async()=>{ if (await w(db=>db.doc("ops/"+id).delete(),"Gelöscht")) closeModal(); };
   });
@@ -986,7 +1001,7 @@ function roundForm(){
     r.querySelector("#rSave").onclick = async ()=>{
       const payer=r.querySelector("#rPayer").value; if(!payer){ toast("Bitte auswählen, wer ausgibt."); return; }
       const ref=S.db.collection("rounds").doc();
-      if (await w(()=>ref.set({payer, reason:r.querySelector("#rReason").value.trim(), open:true, ts:Date.now(), by:S.email||""}), `Runde von ${mName(payer)} läuft`)){ closeModal(); UI.sel="r:"+ref.id; render(); }
+      if (await w(()=>ref.set({payer, reason:r.querySelector("#rReason").value.trim(), open:true, ts:Date.now(), by:who()}), `Runde von ${mName(payer)} läuft`)){ closeModal(); UI.sel="r:"+ref.id; render(); }
     };
   });
 }
@@ -1179,7 +1194,7 @@ function stockForm(mode){
       ${p.crate>1?`<input type="number" min="0" step="1" data-pid="${p.id}" data-k="crate" placeholder="Kästen" aria-label="${esc(p.name)} Kästen">`:`<span></span>`}
       <input type="number" min="0" step="1" data-pid="${p.id}" data-k="pcs" placeholder="${inv?"Stück":"+ Stück"}" aria-label="${esc(p.name)} Stück">
       <input type="date" data-pid="${p.id}" data-k="mhd" value="${esc(p.mhd||"")}" aria-label="${esc(p.name)} MHD" title="Nächstes MHD"></div>`).join("")}</div>
-    ${inv||!adminOpen()?"":`<div class="eyebrow">Für das Kassenbuch</div><div class="grid2"><label class="f">Betrag laut Kassenbon in €<input type="text" id="buyAmt" inputmode="decimal" placeholder="leer = nicht aus der Kasse"></label>
+    ${inv||!can("money")?"":`<div class="eyebrow">Für das Kassenbuch</div><div class="grid2"><label class="f">Betrag laut Kassenbon in €<input type="text" id="buyAmt" inputmode="decimal" placeholder="leer = nicht aus der Kasse"></label>
       <label class="f">Geschäft<input type="text" id="buyShop" maxlength="60" placeholder="z. B. Getränkemarkt"></label></div>
       ${S.assets?`<label class="f">Kassenbon fotografieren<input type="file" id="buyFile" accept="image/*,application/pdf" capture="environment"></label>`:""}`}
     <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="stSave">${inv?"Bestand übernehmen":"Einbuchen"}</button></div>`, r=>{
@@ -1216,7 +1231,7 @@ function leergutForm(){
   modal(`<h3>Leergut zurückgegeben</h3><p class="muted" style="margin:0">Vorausgefüllt mit dem berechneten Leergut. Anpassen, was tatsächlich zurückging.</p>
     <div>${ps.map(p=>`<div class="mrow" style="grid-template-columns:1fr auto"><span><b>${esc(p.name)}</b><br><span class="muted small">da: ${units(empties(p.id),p.crate)}</span></span><input type="number" min="0" step="1" data-pid="${p.id}" value="${empties(p.id)}" aria-label="${esc(p.name)} Flaschen zurück"></div>`).join("")}</div>
     <div class="row between"><b>Pfand gesamt</b><b class="num" id="lgSum"></b></div>
-    ${adminOpen()?`<label class="row" style="font-weight:600"><input type="checkbox" id="lgCash" checked> Pfandgeld als Einnahme ins Kassenbuch</label>`:""}
+    ${can("money")?`<label class="row" style="font-weight:600"><input type="checkbox" id="lgCash" checked> Pfandgeld als Einnahme ins Kassenbuch</label>`:""}
     <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="lgSave">Übernehmen</button></div>`, r=>{
     const inputs=[...r.querySelectorAll("input[data-pid]")];
     const sum=()=>inputs.reduce((s,i)=>s+val(S.products[i.dataset.pid], Math.max(0,parseInt(i.value)||0)),0);
@@ -1284,8 +1299,8 @@ function runClose(){
 
 // ================= Änderungsprotokoll =================
 let LOG_MUTE = 0;
-const LOGCOLS = {members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
-const LOGCAT = {members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
+const LOGCOLS = {users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
+const LOGCAT = {users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
 function fmtVal(k, v){
   if (v==null || v==="") return "–";
   if (["price","pfand","crateP","amount","cashStart"].includes(k)) return eur(v);
@@ -1301,6 +1316,12 @@ function diffText(label, before, patch, names){
 function describeOp(op, before){
   const d=op.data||{};
   switch(op.col){
+    case "users":
+      if (op.t==="set" && !before) return `Benutzer angelegt: ${d.name} (${ROLES[d.role]?.label||d.role})`;
+      if ("role" in d && before && d.role!==before.role) return `Benutzer ${before.name}: Rolle ${ROLES[before.role]?.label||""} -> ${ROLES[d.role]?.label||""}`;
+      if ("active" in d && before && d.active!==before.active) return `Benutzer ${before.name} ${d.active===false?"deaktiviert":"aktiviert"}`;
+      if ("pw" in d && before && before.pw) return `Passwort geändert für ${before.name}`;
+      return null;
     case "members":
       if (op.t==="del") return `Mitglied gelöscht: ${before?before.name:op.id}`;
       if (op.t==="set" && !before) return `Mitglied angelegt: ${d.name}`;
@@ -1341,7 +1362,7 @@ function logOps(op, before){
   let txt=null; try{ txt=describeOp(op, before); }catch(e){}
   return txt ? [logEntry(txt, op.col)] : [];
 }
-function logEntry(text, cat){ return {t:"set", col:"log", id:randId(10), data:{ts:Date.now(), dev:S.email||"Gerät", text:String(text).slice(0,300), cat}, ts:Date.now(), dev:DEV}; }
+function logEntry(text, cat){ return {t:"set", col:"log", id:randId(10), data:{ts:Date.now(), dev:whoDev(), text:String(text).slice(0,300), cat}, ts:Date.now(), dev:DEV}; }
 function addLog(text, cat){ PENDING.push(logEntry(text, cat||"system")); rebuild(); persist(); schedule(); scheduleSync(); }
 function pruneLog(){
   const ids=Object.entries(S.log||{}).sort((a,b)=>(a[1].ts||0)-(b[1].ts||0)).map(x=>x[0]);
@@ -1352,9 +1373,24 @@ function aLog(){
   const all=list("log").sort((a,b)=>(b.ts||0)-(a.ts||0));
   const cats=["Artikel & Preise","Mitglieder","Zahlungen & Kasse","Stornos","Sonstiges"];
   const rows=all.filter(x=>!f || LOGCAT[x.cat]===f);
-  return `<div class="row between"><div class="seg" role="group" aria-label="Filter"><button data-act="logf" data-f="" aria-pressed="${!f}">Alle</button>${cats.map(c=>`<button data-act="logf" data-f="${c}" aria-pressed="${f===c}">${c}</button>`).join("")}</div>
+  const seg=`<div class="seg" role="group" aria-label="Filter"><button data-act="logf" data-f="__b" aria-pressed="${f==="__b"}">Buchungen</button><button data-act="logf" data-f="" aria-pressed="${!f}">Alle Änderungen</button>${cats.map(c=>`<button data-act="logf" data-f="${c}" aria-pressed="${f===c}">${c}</button>`).join("")}</div>`;
+  if (f==="__b"){
+    const bk=list("bookings").sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const people=[...new Set(bk.map(b=>b.by||"–"))].sort((a,b)=>a.localeCompare(b,"de"));
+    const wsel=UI.logWho && people.includes(UI.logWho) ? UI.logWho : "";
+    const rs=bk.filter(b=>!wsel || (b.by||"–")===wsel);
+    const sum=rs.reduce((a,b)=>a+(b.price||0)*(b.qty||1),0);
+    return `${seg}
+      <div class="row between"><label class="f" style="min-width:220px">Gebucht von<select id="logWho"><option value="">Alle Personen</option>${people.map(p=>`<option ${p===wsel?"selected":""}>${esc(p)}</option>`).join("")}</select></label>
+        <div class="row" style="align-self:flex-end"><span class="muted">${rs.length} Buchungen · ${eur(sum)}</span><button class="btn" data-act="csvtx">Buchungen exportieren</button></div></div>
+      ${rs.length?`<div class="tbl-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Gebucht von</th><th>Für</th><th>Artikel</th><th class="r">Betrag</th></tr></thead><tbody>
+        ${rs.slice(0,400).map(b=>`<tr><td class="num" style="white-space:nowrap">${tsStr(b.ts)}</td><td><b>${esc(b.by||"–")}</b>${b.dev&&b.dev!==b.by?`<br><span class="muted small">${esc(b.dev)}</span>`:""}</td><td>${esc(b.cash?"Barverkauf":b.o?(S.ops[b.o]?.title||"Einsatz"):b.r?`Runde ${mName(b.m)}`:mName(b.m))}</td><td>${b.qty}× ${esc(b.n)}</td><td class="r num">${eur((b.price||0)*(b.qty||1))}</td></tr>`).join("")}
+      </tbody></table></div>`:`<div class="empty"><b>Keine Buchungen seit dem letzten Abschluss.</b></div>`}
+      <p class="muted small" style="margin:0">Zeigt die Einzelbuchungen seit dem letzten Abschluss. Stornos stehen unter „Stornos“.</p>`;
+  }
+  return `<div class="row between">${seg}
       <button class="btn" data-act="logcsv">Protokoll exportieren</button></div>
-    ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Gerät</th><th>Änderung</th></tr></thead><tbody>
+    ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Wer · Gerät</th><th>Änderung</th></tr></thead><tbody>
       ${rows.slice(0,400).map(x=>`<tr><td class="num" style="white-space:nowrap">${tsStr(x.ts)}</td><td class="muted">${esc(x.dev||"")}</td><td>${esc(x.text).replace(/ -&gt; /g," → ")}</td></tr>`).join("")}
     </tbody></table></div>${rows.length>400?`<p class="muted small" style="margin:0">Angezeigt: die neuesten 400 von ${rows.length}. Alle im Export.</p>`:""}`
     :`<div class="empty"><b>Noch keine Einträge.</b><span>Hier erscheint, wer wann an welchem Gerät Preise, Mitglieder, Zahlungen, Kassenbuch oder Einstellungen geändert hat und welche Buchungen storniert wurden.</span></div>`}
@@ -1471,7 +1507,7 @@ async function statementPdf(ids, kind){
     k.table([{h:"Datum",w:34},{h:"Buchung",w:110},{h:"Betrag",w:30,align:"r"}], rows);
     k.p(d.closing<0 ? `Offener Betrag ${eur(-d.closing)} – wird mit der nächsten Aufwandsentschädigung verrechnet.` : d.closing>0 ? `Guthaben ${eur(d.closing)}.` : "Das Konto ist ausgeglichen.", {bold:true});
   });
-  const k=pdfKit(doc,null); k.footer(`Erstellt am ${new Date().toLocaleString("de-DE")} · ${S.email||""} · Kantine ${CFG.kurz||WEHR}`);
+  const k=pdfKit(doc,null); k.footer(`Erstellt am ${new Date().toLocaleString("de-DE")} · ${whoDev()} · Kantine ${CFG.kurz||WEHR}`);
   const name = ids.length===1 ? `Kontoauszug ${S.members[ids[0]].name} ${range.label}.pdf` : `Kontoauszüge ${range.label}.pdf`;
   deliverPdf(doc, pdfName(name));
 }
@@ -1560,8 +1596,109 @@ async function yearReportPdf(Y){
   doc.setDrawColor(120); doc.setLineWidth(0.2);
   [[15,"Kassenwart/in"],[80,"Kassenprüfer/in"],[145,"Kassenprüfer/in"]].forEach(([x,t])=>{ doc.line(x, k.y, x+50, k.y); doc.setFontSize(8.5); doc.setTextColor(100); doc.text(t, x, k.y+4.5); });
   doc.setTextColor(0); k.y+=10;
-  k.footer(`Erstellt am ${new Date().toLocaleString("de-DE")} · ${S.email||""} · Kantine ${CFG.kurz||WEHR}`);
+  k.footer(`Erstellt am ${new Date().toLocaleString("de-DE")} · ${whoDev()} · Kantine ${CFG.kurz||WEHR}`);
   deliverPdf(doc, pdfName(`Jahresabschluss Kantine ${Y}.pdf`));
+}
+
+// ================= Benutzer & Rollen =================
+const ROLES = {
+  admin: {label:"Admin",        rank:4, desc:"alles, auch Benutzer, Einstellungen, Abschluss und Sicherung"},
+  chef:  {label:"Kantinenchef", rank:3, desc:"Verwaltung: Konten, Abzugsliste, Kassenbuch, Preise, Mitglieder, Einsatzverpflegung, Protokoll, Abschluss, PDFs"},
+  hbm:   {label:"HBM",          rank:2, desc:"wie Kantinenteam, zusätzlich Termine anlegen und abrechnen sowie Einsatzverpflegung verwalten"},
+  team:  {label:"Kantinenteam", rank:1, desc:"buchen, bis 15 Minuten stornieren, Barverkauf, Einsätze und Runden, Einkauf und Inventur, Einkaufsliste"}
+};
+const NEED = {book:1, stock:1, events:2, ops:2, admin:2, money:3, master:3, log:3, close:3, system:4};
+const usersOn = () => Object.values(S.users||{}).some(u=>u.active!==false);
+const curUser = () => (UI.user && S.users && S.users[UI.user] && S.users[UI.user].active!==false) ? {id:UI.user, ...S.users[UI.user]} : null;
+const who = () => { const u=curUser(); return u ? u.name : (S.email||"Gerät"); };
+const whoDev = () => { const u=curUser(); return u ? `${u.name} · ${S.email||"Gerät"}` : (S.email||"Gerät"); };
+function rank(){
+  if (usersOn()){ const u=curUser(); return u ? (ROLES[u.role]?.rank||0) : 0; }
+  return adminOpenLegacy() ? 4 : 1;   // ohne Benutzer: alte PIN-Logik
+}
+const can = perm => rank() >= (NEED[perm]||9);
+const userHash = (id, pw) => sha(`user:${id}:${pw}`);
+const activeAdmins = () => Object.entries(S.users||{}).filter(([id,u])=>u.active!==false && u.role==="admin").map(([id])=>id);
+function adminTabsFor(){
+  const all=[["konten","Konten","money"],["ae","Abzugsliste","money"],["einsaetze","Einsatzverpflegung","ops"],["kasse","Kassenbuch","money"],["stamm","Stammdaten","master"],["protokoll","Protokoll","log"],["benutzer","Benutzer","system"],["abschluss","Abschluss & Einstellungen","close"]];
+  return all.filter(t=>can(t[2]));
+}
+function loginView(){
+  const us=Object.entries(S.users).filter(([id,u])=>u.active!==false).map(([id,u])=>({id,...u})).sort((a,b)=>(ROLES[b.role]?.rank||0)-(ROLES[a.role]?.rank||0) || a.name.localeCompare(b.name,"de"));
+  const sel = UI.loginSel && S.users[UI.loginSel] ? UI.loginSel : null;
+  if (sel){ const u=S.users[sel];
+    return `<form class="login panel" id="userLogin"><div><div class="eyebrow">${esc(ROLES[u.role]?.label||"")}</div><h2>${esc(u.name)}</h2></div>
+      <label class="f">Passwort<input type="password" id="ulPw" autocomplete="current-password" required></label>
+      <div class="row"><button class="btn" type="button" data-act="ulback">← Andere Person</button><button class="btn primary" type="submit" style="margin-left:auto">Anmelden</button></div></form>`; }
+  return `<div class="stack"><div><div class="eyebrow">Wer bedient?</div><h2>Anmelden</h2></div>
+    <div class="mgrid">${us.map(u=>`<button class="tile" data-act="ulpick" data-id="${u.id}">${esc(u.name)}<span class="sub">${esc(ROLES[u.role]?.label||"")}</span></button>`).join("")}</div>
+    <p class="muted small" style="margin:0">Jede Buchung wird mit deinem Namen gespeichert. Nach 10 Minuten ohne Bedienung meldet die App ab.</p></div>`;
+}
+function whoBox(){
+  const el=$("#whoBox"); if (!el) return;
+  const u=curUser();
+  if (MODE==="staff" && usersOn() && u){ el.hidden=false; el.innerHTML=`<button class="whobtn" data-act="usermenu" title="Passwort ändern oder abmelden">${esc(u.name)} · ${esc(ROLES[u.role]?.label||"")}</button>`; }
+  else el.hidden=true;
+}
+function userMenu(){
+  const u=curUser(); if (!u) return;
+  modal(`<h3>${esc(u.name)}</h3><p class="muted" style="margin:0">Rolle: ${esc(ROLES[u.role]?.label||"")} – ${esc(ROLES[u.role]?.desc||"")}</p>
+    <div class="actions" style="justify-content:flex-start"><button class="btn" id="umPw">Mein Passwort ändern</button><button class="btn primary" id="umOut">Abmelden</button></div>`, r=>{
+    r.querySelector("#umOut").onclick=()=>{ closeModal(); logoutUser(); };
+    r.querySelector("#umPw").onclick=()=>userPwModal(u.id, true);
+  });
+}
+function logoutUser(msg){ UI.user=null; UI.loginSel=null; ss.set("kantine.user", null); render(); if (msg) toast(msg); }
+function userPwModal(id, self){
+  const u=S.users[id];
+  modal(`<h3>${self?"Mein Passwort ändern":`Passwort für ${esc(u.name)} neu setzen`}</h3>
+    ${self?`<label class="f">Bisheriges Passwort<input type="password" id="upOld" autocomplete="current-password"></label>`:""}
+    <label class="f">Neues Passwort<input type="password" id="upNew" autocomplete="new-password"><span class="hint">Mindestens 4 Zeichen. Auch eine Zahlen-PIN ist möglich.</span></label>
+    <label class="f">Wiederholen<input type="password" id="upNew2" autocomplete="new-password"></label>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="upOk">Speichern</button></div>`, r=>{
+    r.querySelector("#upOk").onclick=async()=>{
+      const a=r.querySelector("#upNew").value, b=r.querySelector("#upNew2").value;
+      if (self && (await userHash(id, r.querySelector("#upOld").value))!==u.pw){ toast("Das bisherige Passwort stimmt nicht."); return; }
+      if (a.length<4){ toast("Das Passwort braucht mindestens 4 Zeichen."); return; }
+      if (a!==b){ toast("Die Passwörter stimmen nicht überein."); return; }
+      const h=await userHash(id,a); if (await w(db=>db.doc("users/"+id).update({pw:h, pwSet:Date.now()}), "Passwort gespeichert")) closeModal();
+    };
+  });
+}
+function aUsers(){
+  const us=Object.entries(S.users||{}).map(([id,u])=>({id,...u})).sort((a,b)=>((a.active===false)-(b.active===false)) || (ROLES[b.role]?.rank||0)-(ROLES[a.role]?.rank||0) || a.name.localeCompare(b.name,"de"));
+  const me=UI.user;
+  return `<div class="panel stack"><p style="margin:0">Jede Person meldet sich mit ihrem Namen und ihrem eigenen Passwort an. So steht bei jeder Buchung, jedem Storno und jeder Änderung, wer es war.</p>
+      <ul class="list">${Object.entries(ROLES).map(([k,r])=>`<li><span class="pill ${k==="admin"?"bad":k==="chef"?"warn":k==="hbm"?"op":"ok"}">${r.label}</span><span class="grow">${esc(r.desc)}</span></li>`).join("")}</ul>
+      ${!usersOn()?`<div class="note">Noch keine Benutzer angelegt. Lege zuerst dich selbst als <b>Admin</b> an. Danach meldet sich jeder mit Namen und Passwort an; Team-PIN und Admin-PIN werden dann nicht mehr verwendet.</div>`:""}</div>
+    <form class="panel grid2" id="userForm"><label class="f">Name<input type="text" id="uName" maxlength="40" required placeholder="z. B. Becker, Anna"></label>
+      <label class="f">Rolle<select id="uRole">${Object.entries(ROLES).map(([k,r])=>`<option value="${k}" ${(!usersOn()&&k==="admin")||(usersOn()&&k==="team")?"selected":""}>${r.label}</option>`).join("")}</select></label>
+      <label class="f">Erstes Passwort<input type="password" id="uPw" autocomplete="new-password" placeholder="mind. 4 Zeichen"><span class="hint">Die Person kann es danach selbst ändern.</span></label>
+      <div class="row" style="align-self:end"><button class="btn primary" type="submit">Benutzer anlegen</button></div></form>
+    ${us.length?`<div class="tbl-wrap"><table style="min-width:560px"><thead><tr><th>Name</th><th>Rolle</th><th>Status</th><th>Zuletzt angemeldet</th><th></th></tr></thead><tbody>
+      ${us.map(u=>{ const self=u.id===me; return `<tr><td><b>${esc(u.name)}</b>${self?` <span class="muted small">(du)</span>`:""}</td>
+        <td>${self?esc(ROLES[u.role]?.label||u.role):`<select data-urole="${u.id}" aria-label="Rolle ${esc(u.name)}">${Object.entries(ROLES).map(([k,r])=>`<option value="${k}" ${k===u.role?"selected":""}>${r.label}</option>`).join("")}</select>`}</td>
+        <td>${u.active===false?`<span class="pill neutral">Deaktiviert</span>`:`<span class="pill ok">Aktiv</span>`}</td>
+        <td class="muted">${u.lastLogin?tsStr(u.lastLogin):"–"}</td>
+        <td class="r" style="white-space:nowrap">${self?"":`<button class="btn small" data-act="upw" data-id="${u.id}">Passwort neu</button> <button class="btn small ${u.active===false?"":"danger"}" data-act="uact" data-id="${u.id}">${u.active===false?"Aktivieren":"Deaktivieren"}</button>`}</td></tr>`; }).join("")}
+    </tbody></table></div>`:""}
+    <p class="muted small" style="margin:0">Es bleibt immer mindestens ein aktiver Admin. Deaktivierte Personen können sich nicht mehr anmelden, ihre bisherigen Buchungen bleiben mit Namen erhalten.</p>`;
+}
+async function createUser(){
+  const name=$("#uName").value.trim().slice(0,40), role=$("#uRole").value, pw=$("#uPw").value;
+  if (!name){ toast("Bitte einen Namen eingeben."); return; }
+  if (pw.length<4){ toast("Das Passwort braucht mindestens 4 Zeichen."); return; }
+  if (Object.values(S.users||{}).some(u=>u.name.toLowerCase()===name.toLowerCase())){ toast("Diesen Namen gibt es schon."); return; }
+  const first=!usersOn();
+  if (first && role!=="admin"){ toast("Der erste Benutzer muss Admin sein – sonst kann niemand mehr Benutzer verwalten."); return; }
+  const id=randId(9);
+  if (await w(db=>db.doc("users/"+id).set({name, role, pw:"", active:true, ts:Date.now()}))){
+    await w(async db=>db.doc("users/"+id).update({pw:await userHash(id,pw)}));
+    $("#uName").value=""; $("#uPw").value="";
+    if (first){ UI.user=id; ss.set("kantine.user", id); UI.lastAct=Date.now(); toast("Benutzer angelegt. Ab jetzt meldet sich jeder mit Namen und Passwort an."); }
+    else toast(`${name} angelegt (${ROLES[role].label})`);
+    render();
+  }
 }
 
 // ---------- Event wiring ----------
@@ -1624,8 +1761,15 @@ document.addEventListener("click", async ev => {
     case "pedit": productForm(id); break;
     case "pay": paymentForm(id); break;
     case "qr": qrModal(id); break;
+    case "ulpick": UI.loginSel=id; render(); break;
+    case "ulback": UI.loginSel=null; render(); break;
+    case "usermenu": userMenu(); break;
+    case "upw": userPwModal(id, false); break;
+    case "uact": { const u=S.users[id]; if (!u) break;
+      if (u.active!==false && u.role==="admin" && activeAdmins().length<=1){ toast("Das ist der letzte aktive Admin – erst einen anderen Admin anlegen."); break; }
+      w(db=>db.doc("users/"+id).update({active:u.active===false}), u.active===false?`${u.name} aktiviert`:`${u.name} deaktiviert`); break; }
     case "logf": UI.logFilter=t.dataset.f; render(); break;
-    case "logcsv": saveFile(`Kantine-Protokoll-${today()}.csv`, csv(["Zeitpunkt","Gerät","Bereich","Änderung"], list("log").sort((a,b)=>(a.ts||0)-(b.ts||0)).map(x=>[new Date(x.ts).toLocaleString("de-DE"), x.dev||"", LOGCAT[x.cat]||"", x.text]))); break;
+    case "logcsv": saveFile(`Kantine-Protokoll-${today()}.csv`, csv(["Zeitpunkt","Wer / Gerät","Bereich","Änderung"], list("log").sort((a,b)=>(a.ts||0)-(b.ts||0)).map(x=>[new Date(x.ts).toLocaleString("de-DE"), x.dev||"", LOGCAT[x.cat]||"", x.text]))); break;
     case "stmt": statementModal(id); break;
     case "stmtall": statementModal(null); break;
     case "yearpdf": t.disabled=true; await yearReportPdf(+($("#yrSel")?.value||new Date().getFullYear())); t.disabled=false; break;
@@ -1668,9 +1812,9 @@ document.addEventListener("click", async ev => {
       const rows=membersActive().map(m=>[m.name, centsIn(balance(m.id)), lastActivity(m.id)?new Date(lastActivity(m.id)).toLocaleString("de-DE"):""]);
       saveFile(`Kantine-Konten-${today()}.csv`, csv(["Name","Kontostand EUR","Letzte Buchung"], rows)); break; }
     case "csvtx": {
-      const rows=[...list("bookings").map(b=>[new Date(b.ts).toLocaleString("de-DE"), b.cash?"Gast":b.o?`Wehr: ${S.ops[b.o]?.title||""}`:mName(b.m), b.cash?"Barverkauf":b.o?"Einsatzverpflegung":b.r?"Runde":"Verzehr", `${b.qty}x ${b.n}`, centsIn(-(b.price*b.qty)), b.by||""]),
-        ...list("payments").map(p=>[new Date(p.ts).toLocaleString("de-DE"),mName(p.m),"Einzahlung",p.note||"",centsIn(p.amount),""])];
-      saveFile(`Kantine-Buchungen-${today()}.csv`, csv(["Zeitpunkt","Name","Art","Text","Betrag EUR","Gebucht von"], rows)); break; }
+      const rows=[...list("bookings").map(b=>[new Date(b.ts).toLocaleString("de-DE"), b.cash?"Gast":b.o?`Wehr: ${S.ops[b.o]?.title||""}`:mName(b.m), b.cash?"Barverkauf":b.o?"Einsatzverpflegung":b.r?"Runde":"Verzehr", `${b.qty}x ${b.n}`, centsIn(-(b.price*b.qty)), b.by||"", b.dev||""]),
+        ...list("payments").map(p=>[new Date(p.ts).toLocaleString("de-DE"),mName(p.m),"Einzahlung",p.note||"",centsIn(p.amount),"",""])];
+      saveFile(`Kantine-Buchungen-${today()}.csv`, csv(["Zeitpunkt","Name","Art","Text","Betrag EUR","Gebucht von","Gerät"], rows)); break; }
     case "close": runClose(); break;
     case "lock": UI.unlocked=false; render(); break;
     case "pinrm": confirmBox("PIN entfernen","Dann kann am gemeinsamen Tablet jeder die Verwaltung öffnen.","PIN entfernen",()=>w(db=>db.doc("settings/app").set({...S.settings,pinHash:""}),"PIN entfernt"),true); break;
@@ -1694,10 +1838,22 @@ document.addEventListener("change", e => {
   if (id==="cashYear"){ UI.cashYear=+e.target.value; render(); }
   if (id==="opYear"){ UI.opYear=+e.target.value; render(); }
   if (id==="restoreFile" && e.target.files[0]) restoreBackup(e.target.files[0]);
+  if (e.target.dataset && e.target.dataset.urole){ const uid=e.target.dataset.urole, role=e.target.value, u=S.users[uid];
+    if (u && u.role==="admin" && role!=="admin" && activeAdmins().length<=1){ toast("Das ist der letzte aktive Admin."); render(); }
+    else w(db=>db.doc("users/"+uid).update({role}), `${u.name}: ${ROLES[role].label}`); }
+  if (id==="logWho"){ UI.logWho=e.target.value; render(); }
 });
 document.addEventListener("submit", async e => {
   e.preventDefault();
   if (e.target.id==="shopForm"){ const inp=$("#shopText"); const v=inp.value.trim(); if(!v) return; if (await w(db=>db.collection("shopping").doc().set({text:v.slice(0,80),done:false,ts:Date.now()}))) inp.value=""; }
+  if (e.target.id==="userForm"){ await createUser(); return; }
+  if (e.target.id==="userLogin"){
+    const id=UI.loginSel, u=S.users[id]; const pw=$("#ulPw").value;
+    if (!u || u.active===false){ UI.loginSel=null; render(); return; }
+    if ((await userHash(id,pw))!==u.pw){ toast("Passwort falsch."); $("#ulPw").value=""; return; }
+    UI.user=id; UI.loginSel=null; UI.lastAct=Date.now(); ss.set("kantine.user", id); LOG_MUTE++; try{ await w(db=>db.doc("users/"+id).update({lastLogin:Date.now()})); } finally { LOG_MUTE--; }
+    if (UI.view==="verwaltung" && !can("admin")) location.hash="#kiosk"; render(); toast(`Hallo ${firstName(u.name)}!`); return;
+  }
   if (e.target.id==="tokForm"){ const v=$("#tokExp").value; if (await w(db=>db.doc("settings/app").set({...S.settings, tokenExp:v}), "Gespeichert")) ls.set("kantine.tokenexp", null); return; }
   if (e.target.id==="setForm"){
     const unit=$("#setUnit").value.trim().slice(0,60), pin=$("#setPin").value.trim(), tpin=$("#setTPin").value.trim();
@@ -1710,6 +1866,8 @@ document.addEventListener("submit", async e => {
 });
 document.addEventListener("pointerdown", ()=>{ UI.lastAct=Date.now(); if (UI.unlocked) UI.unlockAt=Date.now(); }, {passive:true});
 
+// Benutzer nach 10 Minuten ohne Bedienung abmelden
+setInterval(()=>{ if (MODE==="staff" && usersOn() && curUser() && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML) logoutUser("Nach 10 Minuten ohne Bedienung abgemeldet."); }, 15000);
 // Sperre nach 10 Minuten ohne Bedienung (wenn Team-PIN gesetzt)
 setInterval(()=>{ if (MODE==="staff" && S.settings.teamPinHash && !UI.tlocked && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML){ UI.tlocked=true; UI.unlocked=false; render(); } }, 15000);
 // Alarm-Pause: nach 2 Minuten ohne Eingabe zurück zur Namensliste, Warenkorb bleibt gemerkt
@@ -2026,7 +2184,7 @@ async function remember(raw, keep, devname){
 }
 function startStaff(){
   S.email = ls.get("kantine.devname") || "Gerät";
-  S.role="team"; S.canEdit=true; S.canWrite=true; S.db=DB; S.assets=assetsAdapter;
+  S.role="team"; S.canEdit=true; S.canWrite=true; S.db=DB; S.assets=assetsAdapter; UI.user=ss.get("kantine.user")||null;
   UI.tlocked = !!(S.settings && S.settings.teamPinHash);
   rebuild(); UI.tlocked = !!S.settings.teamPinHash;
   MODE="staff"; setChrome(true); updSync(); route(); syncNow();
