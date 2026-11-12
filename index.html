@@ -127,6 +127,15 @@ label.f{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9r
 
 /* Kiosk */
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mwrap{display:flex;gap:10px;align-items:flex-start;--azh:min(calc(100vh - var(--hdr,150px) - 150px), 640px);min-height:var(--azh)}
+.mwrap>.mgrid{flex:1;min-width:0}
+.mgrid .tile{scroll-margin-top:calc(var(--hdr,150px) + 12px)}
+.azbar{position:sticky;top:calc(var(--hdr,150px) + 8px);display:flex;flex-direction:column;flex:none;width:36px;height:var(--azh);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 0;overflow:hidden}
+.azbar button{flex:1 1 0;min-height:14px;border:0;background:none;font:700 clamp(.7rem,2vh,1rem) var(--f-body);color:var(--ink);cursor:pointer;padding:0;line-height:1}
+.azbar button:disabled{color:var(--line);cursor:default}
+.azbar button:not(:disabled):hover,.azbar button:focus-visible{color:var(--red);outline:none}
+.tile.flash{animation:flash 1s ease}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--red)}100%{box-shadow:0 0 0 0 transparent}}
 .tile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 12px;min-height:76px;font-family:var(--f-display);font-weight:600;font-size:1.3rem;line-height:1.1;cursor:pointer;text-align:left;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;overflow-wrap:anywhere}
 .tile:hover{border-color:var(--red)}
 .tile:active{transform:scale(.98)}
@@ -496,6 +505,7 @@ function render(){
   let html;
   if (MODE!=="staff") return;
   whoBox();
+  try{ document.documentElement.style.setProperty("--hdr", (document.querySelector("header.top")?.offsetHeight||150)+"px"); }catch(e){}
   if (usersOn() && !curUser() && S.loaded.size >= COLS.length+1){ main.innerHTML=loginView(); const f=$("#ulPw"); if (f) f.focus(); return; }
   if (!usersOn() && S.settings.teamPinHash && UI.tlocked){
     main.innerHTML=`<div class="stack" style="max-width:360px;margin:0 auto;text-align:center"><h2>Kantine gesperrt</h2><p class="muted" style="margin:0">Team-PIN oder Admin-PIN eingeben.</p>
@@ -514,6 +524,9 @@ function render(){
 const roNote = () => canWrite() ? "" : `<div class="note">Nur Ansicht: Dein Zugang ist zum Lesen freigeschaltet. Buchen kann der Kassenwart.</div>`;
 
 // ---------- Strichliste ----------
+const azOf = n => { const c=String(n||"").trim().charAt(0).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); return /[A-Z]/.test(c)?c:"#"; };
+function azBar(ms){ const have=new Set(ms.map(m=>azOf(m.name))); const L=[..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"].concat(have.has("#")?["#"]:[]);
+  return `<nav class="azbar" aria-label="Springe zu Buchstabe">${L.map(l=>`<button type="button" data-act="az" data-l="${l}" ${have.has(l)?"":"disabled"} aria-label="Namen mit ${l}">${l}</button>`).join("")}</nav>`; }
 function vKiosk(){
   const ms = membersActive(); const ps = productsActive();
   if (!ms.length || !ps.length){
@@ -545,9 +558,9 @@ function vKiosk(){
     <div class="row between"><div><h2>Mitglieder ${help("kiosk")}</h2></div>
       <div class="row" style="flex:1;min-width:200px;max-width:520px;flex-wrap:nowrap"><input type="search" id="kSearch" placeholder="Suchen" aria-label="Name suchen" value="${esc(UI.search)}">${canWrite()?`<button class="btn ${UI.multi?"primary":""}" data-act="multi" style="flex:none">${UI.multi?"Auswahl beenden":"Mehrere buchen"}</button>`:""}</div></div>
     ${UI.multi?`<div class="note" style="background:var(--surface-2);color:var(--ink)">Namen antippen, die das Gleiche bekommen – dann unten auf „Artikel wählen“.${q?"":` <button class="btn small ghost" data-act="msall">Alle auswählen</button>`}</div>`:""}
-    <div class="mgrid ${UI.multi?"multi":""}">${shown.map(m=>UI.multi
-      ? `<button class="tile ${UI.msel.includes(m.id)?"chk":""}" data-act="mtoggle" data-id="${m.id}" aria-pressed="${UI.msel.includes(m.id)}"><span class="tick">${UI.msel.includes(m.id)?"✓":""}</span>${esc(m.name)}</button>`
-      : `<button class="tile" data-act="pick" data-key="m:${m.id}">${esc(m.name)}${UI.carts["m:"+m.id]?`<span class="pend">offen</span>`:""}</button>`).join("") || `<p class="muted">Kein Name passt zu „${esc(UI.search)}“.</p>`}</div>
+    <div class="mwrap"><div class="mgrid ${UI.multi?"multi":""}">${shown.map(m=>UI.multi
+      ? `<button class="tile ${UI.msel.includes(m.id)?"chk":""}" data-az="${azOf(m.name)}" data-act="mtoggle" data-id="${m.id}" aria-pressed="${UI.msel.includes(m.id)}"><span class="tick">${UI.msel.includes(m.id)?"✓":""}</span>${esc(m.name)}</button>`
+      : `<button class="tile" data-az="${azOf(m.name)}" data-act="pick" data-key="m:${m.id}">${esc(m.name)}${UI.carts["m:"+m.id]?`<span class="pend">offen</span>`:""}</button>`).join("") || `<p class="muted">Kein Name passt zu „${esc(UI.search)}“.</p>`}</div>${shown.length>8?azBar(shown):""}</div>
     ${UI.multi?`<div class="selbar"><div><div class="eyebrow">Ausgewählt</div><b class="num" style="font-size:1.4rem">${UI.msel.length} ${UI.msel.length===1?"Mitglied":"Mitglieder"}</b></div>${UI.msel.length?`<button class="btn ghost" data-act="msnone">Alle abwählen</button>`:""}<button class="btn primary" data-act="mgo" ${UI.msel.length?"":"disabled"}>Artikel wählen</button></div>`:""}
     ${recent.length?`<div class="panel section"><div class="row between"><h3>Zuletzt</h3><span class="muted small">Stornieren bis 15 Minuten nach der Buchung</span></div>
       <ul class="list">${recent.map(b=>`<li><span class="grow"><b>${esc(b.cash?"Barverkauf":b.o?`${S.ops[b.o]?.title||"Einsatz"}${b.m?` (${mName(b.m)})`:""}`:b.r?`Runde ${mName(b.m)}`:mName(b.m))}</b> · ${b.qty}× ${esc(b.n)} <span class="muted">· ${new Date(b.ts).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${b.by?` · ${esc(String(b.by).split("@")[0])}`:""}</span></span><span class="num">${eur(b.price*b.qty)}</span>${canWrite()?`<button class="btn small" data-act="storno" data-id="${b.id}">Storno</button>`:""}</li>`).join("")}</ul></div>`:""}
@@ -1944,6 +1957,7 @@ document.addEventListener("click", async ev => {
     case "splitnew": splitForm(); break;
     case "evsplit": { const e=S.events[id]; if (!e) break; const wts={}; list("signups").filter(x=>x.e===id && S.members[x.m]).forEach(x=>{ wts[x.m]=x.count||1; }); splitForm({text:e.title, weights:wts, eventId:id}); break; }
     case "help": showHelp(t.dataset.k); break;
+    case "az": { const el=document.querySelector(`.mgrid .tile[data-az="${t.dataset.l}"]`); if (el){ el.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth", block:"start"}); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); } break; }
     case "mdetail": memberDetail(id); break;
     case "roundend": { const r=S.rounds[id]; confirmBox("Runde beenden", `Die Runde von <b>${esc(mName(r.payer))}</b> kostet <b>${eur(roundTotal(id))}</b>. Alles ist bereits auf ihr Konto gebucht. Runde jetzt schließen?`.replace("ihr Konto","das Konto"), "Runde beenden", async()=>{ if (await w(db=>db.doc("rounds/"+id).update({open:false}),"Runde beendet – danke fürs Ausgeben!")){ setCart("r:"+id,{}); UI.sel=null; render(); } }); break; }
     case "signup": signupForm(id); break;
@@ -2101,6 +2115,7 @@ document.addEventListener("click", ()=>{ if (!wakeLock) wakeCheck(); });
 // Routing
 function route(){ if (MODE!=="staff") return; const h=location.hash.slice(1); UI.view = VIEWS.includes(h)? h : "kiosk"; if (UI.view!=="kiosk") UI.sel=null; closeModal(); render(); window.scrollTo({top:0}); }
 window.addEventListener("hashchange", route);
+window.addEventListener("resize", ()=>{ try{ document.documentElement.style.setProperty("--hdr", (document.querySelector("header.top")?.offsetHeight||150)+"px"); }catch(e){} });
 function sync(state){ $("#syncDot").className="dot"+(state==="on"?" on":state==="err"?" err":""); $("#syncText").textContent = state==="on"?"Live":state==="err"?"Offline":"Verbinde …"; }
 
 // ================= Speicher: verschlüsselt im privaten GitHub-Repository =================
