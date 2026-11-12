@@ -130,6 +130,16 @@ label.f{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9r
 .tile .tag{font-family:var(--f-body);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .tile.op .tag{color:var(--op)} .tile.round .tag{color:var(--warn)}
 .tile .pend{position:absolute;top:8px;right:8px;background:var(--warn);color:var(--surface);font-family:var(--f-body);font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 8px}
+.tile.chk{border-color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
+.tile .tick{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:6px;border:2px solid var(--line);background:var(--surface);font-family:var(--f-body);font-size:.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--red-ink)}
+.tile.chk .tick{background:var(--red);border-color:var(--red)}
+.mgrid.multi .tile{padding-top:38px}
+.tile.cash{border-color:var(--ok);background:var(--ok-soft)}
+.tile.cash .tag{color:var(--ok)}
+.who.cash{border-color:var(--ok);background:var(--ok-soft)}
+.who.multi{border-color:var(--red)}
+.selbar{position:sticky;bottom:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.08)}
+.selbar .btn.primary{margin-left:auto;min-height:50px;font-size:1.1rem}
 .special{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
 .addtile{border-style:dashed;background:transparent;font-size:1.1rem;color:var(--muted)}
 .pending{background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
@@ -286,14 +296,14 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
 (() => {
 "use strict";
 // ================= State =================
-const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements"];
+const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log"];
 const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
 COLS.forEach(c => S[c] = {});
-const UI = { view:"kiosk", sel:null, carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
+const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
   adminTab:"konten", statProd:"", statMeasure:"q", statMonth:null, year:new Date().getFullYear(), cashYear:new Date().getFullYear(), opYear:new Date().getFullYear(), lastAct:Date.now() };
 const CATS = ["Getränke","Heißgetränke","Essen","Snacks","Sonstiges"];
 const OPKINDS = ["Einsatz","Übung","Dienstabend","Sonstiges"];
-const CASHCATS = ["Einkauf Kantine","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
+const CASHCATS = ["Barverkauf","Einkauf Kantine","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
 const VIEWS = ["kiosk","konto","termine","lager","statistik","verwaltung"];
 const DAY = 864e5;
 
@@ -351,7 +361,7 @@ function soldSince(pid, at){ let s=0; for (const b of Object.values(S.bookings))
 const stock = pid => { const p=S.products[pid]; return p ? (p.base||0) - soldSince(pid, p.baseAt) : 0; };
 const empties = pid => { const p=S.products[pid]; return p && p.pfand ? Math.max(0,(p.emptyBase||0) + soldSince(pid, p.emptyAt||p.baseAt)) : 0; };
 function stockState(p){ if (p.track===false) return "none"; const s=stock(p.id); if (s<=0) return "out"; if (s<=(p.min||0)) return "low"; return "ok"; }
-function units(n, crate){ if (!(crate>1) || n<=0) return nf.format(n)+(crate>1?" Fl.":""); const k=Math.floor(n/crate), r=n%crate; return `${k} ${k===1?"Kasten":"Kästen"}${r?` + ${r} Fl.`:""}`; }
+function units(n, crate){ if (!(crate>1) || n<crate) return nf.format(n)+(crate>1?" Fl.":""); const k=Math.floor(n/crate), r=n%crate; return `${k} ${k===1?"Kasten":"Kästen"}${r?` + ${r} Fl.`:""}`; }
 function mhdState(p){ if (!p.mhd) return null; const d=(new Date(p.mhd+"T12:00:00") - new Date(today()+"T12:00:00"))/DAY; return d<0?"exp":d<=7?"soon":"ok"; }
 function mhdText(p){ const s=mhdState(p); if(!s) return ""; const d=Math.round((new Date(p.mhd+"T12:00:00") - new Date(today()+"T12:00:00"))/DAY); return s==="exp"?`MHD abgelaufen (${dDate(p.mhd)})`: d===0?"MHD heute": `MHD in ${d} ${d===1?"Tag":"Tagen"}`; }
 
@@ -368,6 +378,8 @@ function target(key){
   if (t==="m" && S.members[id]) return {t,id,key,label:S.members[id].name};
   if (t==="o" && S.ops[id]) { const o=S.ops[id]; return {t,id,key,label:o.title,o}; }
   if (t==="r" && S.rounds[id]) { const r=S.rounds[id]; return {t,id,key,label:`Runde von ${mName(r.payer)}`,r}; }
+  if (t==="b") return {t,id:"",key,label:"Barverkauf"};
+  if (t==="x"){ const ids=id.split(",").filter(x=>S.members[x]); if (!ids.length) return null; return {t,id,key,ids,label:`${ids.length} Mitglieder`}; }
   return null;
 }
 const cartOf = key => UI.carts[key]?.items || {};
@@ -481,7 +493,7 @@ function render(){
   }
   if (!S.db && S.failed) html = `<div class="empty"><b>Die Daten konnten nicht geladen werden.</b><span>Bitte Internetverbindung prüfen und die Seite neu laden.</span></div>`;
   else if (S.loaded.size < COLS.length+1) html = `<div class="empty"><b>Kantine wird geladen …</b><span>${S.offline?"Die Daten sind gerade nicht erreichbar. Die Ansicht aktualisiert sich, sobald die Verbindung steht.":"Mitglieder, Artikel und Buchungen kommen gleich."}</span></div>`;
-  else html = ({kiosk:vKiosk, konto:vKonto, termine:vTermine, lager:vLager, statistik:vStats, verwaltung:vAdmin}[UI.view] || vKiosk)();
+  else html = (UI.view!=="verwaltung"?tokenNote(14):"") + ({kiosk:vKiosk, konto:vKonto, termine:vTermine, lager:vLager, statistik:vStats, verwaltung:vAdmin}[UI.view] || vKiosk)();
   main.innerHTML = html;
   for (const [id,v] of Object.entries(keep)){ const el=document.getElementById(id); if (el && main.contains(el) && !el.dataset.fresh){ if (el.type==="checkbox") el.checked=v; else el.value=v; } }
   if (act){ const el=document.getElementById(act); if (el){ el.focus(); try{ if(sel && sel[0]!=null) el.setSelectionRange(sel[0],sel[1]); }catch(e){} } }
@@ -512,17 +524,21 @@ function vKiosk(){
     ${pend.length?`<div class="pending"><b>Angefangene Buchungen – noch nicht gebucht</b>
       ${pend.map(x=>`<div class="row between"><span><b style="color:inherit">${esc(x.t.label)}</b> · ${cnt(x.c.items)} Artikel · seit ${new Date(x.c.ts).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}</span><span class="row"><button class="btn small primary" data-act="pick" data-key="${esc(x.k)}">Weiter buchen</button><button class="btn small ghost" data-act="dropcart" data-key="${esc(x.k)}">Verwerfen</button></span></div>`).join("")}</div>`:""}
     ${roNote()}
-    <div class="section"><div class="eyebrow">Auf die Wehr oder eine Runde buchen</div>
+    <div class="section"><div class="eyebrow">Barverkauf, Wehr oder Runde</div>
       <div class="special">
         ${ops.map(o=>{const tt=opTotals(o.id).total;return `<button class="tile op" data-act="pick" data-key="o:${o.id}"><span class="tag">${esc(o.kind||"Einsatz")} · ${dDate(o.date).slice(0,6)}</span>${esc(o.title)}<span class="sub">Verpflegung bisher ${eur(tt)}</span>${UI.carts["o:"+o.id]?`<span class="pend">offen</span>`:""}</button>`}).join("")}
         ${rounds.map(r=>`<button class="tile round" data-act="pick" data-key="r:${r.id}"><span class="tag">Runde${r.reason?` · ${esc(r.reason)}`:""}</span>${esc(mName(r.payer))} gibt aus<span class="sub">bisher ${eur(roundTotal(r.id))}</span>${UI.carts["r:"+r.id]?`<span class="pend">offen</span>`:""}</button>`).join("")}
-        ${canWrite()?`<button class="tile addtile" data-act="opnew">+ Einsatz oder Übung verpflegen</button><button class="tile addtile" data-act="roundnew">+ Runde ausgeben</button>`:""}
+        ${canWrite()?`<button class="tile cash" data-act="pick" data-key="b:"><span class="tag">Gäste · Tag der offenen Tür</span>Bar bezahlt<span class="sub">kommt direkt ins Kassenbuch</span>${UI.carts["b:"]?`<span class="pend">offen</span>`:""}</button><button class="tile addtile" data-act="opnew">+ Einsatz oder Übung verpflegen</button><button class="tile addtile" data-act="roundnew">+ Runde ausgeben</button>`:""}
       </div></div>
     <div class="row between"><div><div class="eyebrow">Ausgabe – wer bekommt was?</div><h2>Mitglieder</h2></div>
-      <div style="flex:1;min-width:200px;max-width:340px"><input type="search" id="kSearch" placeholder="Name suchen …" aria-label="Name suchen" value="${esc(UI.search)}"></div></div>
-    <div class="mgrid">${shown.map(m=>`<button class="tile" data-act="pick" data-key="m:${m.id}">${esc(m.name)}${UI.carts["m:"+m.id]?`<span class="pend">offen</span>`:""}</button>`).join("") || `<p class="muted">Kein Name passt zu „${esc(UI.search)}“.</p>`}</div>
+      <div class="row" style="flex:1;min-width:200px;max-width:520px;flex-wrap:nowrap"><input type="search" id="kSearch" placeholder="Name suchen …" aria-label="Name suchen" value="${esc(UI.search)}">${canWrite()?`<button class="btn ${UI.multi?"primary":""}" data-act="multi" style="flex:none">${UI.multi?"Auswahl beenden":"Mehrere buchen"}</button>`:""}</div></div>
+    ${UI.multi?`<div class="note" style="background:var(--surface-2);color:var(--ink)">Namen antippen, die das Gleiche bekommen – dann unten auf „Artikel wählen“.${q?"":` <button class="btn small ghost" data-act="msall">Alle auswählen</button>`}</div>`:""}
+    <div class="mgrid ${UI.multi?"multi":""}">${shown.map(m=>UI.multi
+      ? `<button class="tile ${UI.msel.includes(m.id)?"chk":""}" data-act="mtoggle" data-id="${m.id}" aria-pressed="${UI.msel.includes(m.id)}"><span class="tick">${UI.msel.includes(m.id)?"✓":""}</span>${esc(m.name)}</button>`
+      : `<button class="tile" data-act="pick" data-key="m:${m.id}">${esc(m.name)}${UI.carts["m:"+m.id]?`<span class="pend">offen</span>`:""}</button>`).join("") || `<p class="muted">Kein Name passt zu „${esc(UI.search)}“.</p>`}</div>
+    ${UI.multi?`<div class="selbar"><div><div class="eyebrow">Ausgewählt</div><b class="num" style="font-size:1.4rem">${UI.msel.length} ${UI.msel.length===1?"Mitglied":"Mitglieder"}</b></div>${UI.msel.length?`<button class="btn ghost" data-act="msnone">Alle abwählen</button>`:""}<button class="btn primary" data-act="mgo" ${UI.msel.length?"":"disabled"}>Artikel wählen</button></div>`:""}
     ${recent.length?`<div class="panel section"><div class="row between"><h3>Gerade gebucht</h3><span class="muted small">Stornieren bis 15 Minuten nach der Buchung</span></div>
-      <ul class="list">${recent.map(b=>`<li><span class="grow"><b>${esc(b.o?(S.ops[b.o]?.title||"Einsatz"):b.r?`Runde ${mName(b.m)}`:mName(b.m))}</b> · ${b.qty}× ${esc(b.n)} <span class="muted">· ${new Date(b.ts).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${b.by?` · ${esc(String(b.by).split("@")[0])}`:""}</span></span><span class="num">${eur(b.price*b.qty)}</span>${canWrite()?`<button class="btn small" data-act="storno" data-id="${b.id}">Stornieren</button>`:""}</li>`).join("")}</ul></div>`:""}
+      <ul class="list">${recent.map(b=>`<li><span class="grow"><b>${esc(b.cash?"Barverkauf":b.o?(S.ops[b.o]?.title||"Einsatz"):b.r?`Runde ${mName(b.m)}`:mName(b.m))}</b> · ${b.qty}× ${esc(b.n)} <span class="muted">· ${new Date(b.ts).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${b.by?` · ${esc(String(b.by).split("@")[0])}`:""}</span></span><span class="num">${eur(b.price*b.qty)}</span>${canWrite()?`<button class="btn small" data-act="storno" data-id="${b.id}">Stornieren</button>`:""}</li>`).join("")}</ul></div>`:""}
   </div>`;
 }
 function vKioskProducts(t, ps){
@@ -533,6 +549,8 @@ function vKioskProducts(t, ps){
   let head;
   if (t.t==="m"){ const bal=balance(t.id); head=`<div class="who"><button class="btn" data-act="unpick">← Zurück</button><span class="name">${esc(t.label)}</span><span class="bal"><span class="eyebrow">Kontostand</span><br><b class="num ${bal<0?"neg":"pos"}">${eur(bal)}</b></span></div>`; }
   else if (t.t==="o"){ head=`<div class="who op"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--op)">${esc(t.o.kind||"Einsatz")} · ${dDate(t.o.date)} · geht auf die Wehr</span><br><span class="name">${esc(t.label)}</span></span><span class="bal"><span class="eyebrow">Bisher</span><br><b class="num">${eur(opTotals(t.id).total)}</b><br><button class="btn small" data-act="opend" data-id="${t.id}" style="margin-top:6px">Verpflegung beenden</button></span></div>`; }
+  else if (t.t==="b"){ head=`<div class="who cash"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--ok)">Gäste zahlen sofort bar · kein Konto wird belastet</span><br><span class="name">Barverkauf</span></span></div>`; }
+  else if (t.t==="x"){ const nm=t.ids.map(id=>S.members[id].name); head=`<div class="who multi"><button class="btn" data-act="unpick">← Auswahl ändern</button><span style="min-width:0;flex:1"><span class="eyebrow">Jeder bekommt dasselbe</span><br><span class="name">${t.ids.length} Mitglieder</span><div class="chips" style="margin-top:6px">${nm.slice(0,14).map(n=>`<span class="chip">${esc(n)}</span>`).join("")}${nm.length>14?`<span class="chip">+${nm.length-14} weitere</span>`:""}</div></span></div>`; }
   else { head=`<div class="who round"><button class="btn" data-act="unpick">← Zurück</button><span><span class="eyebrow" style="color:var(--warn)">Runde${t.r.reason?` · ${esc(t.r.reason)}`:""} · alles geht auf ${esc(mName(t.r.payer))}</span><br><span class="name">${esc(t.label)}</span></span><span class="bal"><span class="eyebrow">Bisher</span><br><b class="num">${eur(roundTotal(t.id))}</b><br><button class="btn small" data-act="roundend" data-id="${t.id}" style="margin-top:6px">Runde beenden</button></span></div>`; }
   return `<div class="stack">${head}${roNote()}
     ${groups.map(([c,arr])=>`<div class="section"><div class="eyebrow">${c==="_"?"Weitere":esc(c)}</div><div class="pgrid">${arr.map(p=>{
@@ -543,9 +561,9 @@ function vKioskProducts(t, ps){
         <span class="pn">${esc(p.name)}</span><span class="pp num">${eur(p.price)}</span><span class="ps ${cls}">${stTxt}</span>
         ${q?`<span class="badge num">${q}</span><button class="minus" data-act="sub" data-id="${p.id}" aria-label="Eins weniger ${esc(p.name)}">−</button>`:""}</div>`;
     }).join("")}</div></div>`).join("")}
-    <div class="cartbar"><div><div class="eyebrow">${items?`${items} Artikel`:"Noch nichts gewählt"}</div><div class="sum num">${eur(total)}</div></div>
+    <div class="cartbar"><div><div class="eyebrow">${items?(t.t==="x"?`${items} Artikel je Person`:`${items} Artikel`):"Noch nichts gewählt"}</div><div class="sum num">${t.t==="x"&&items?`${eur(total)} <span class="muted" style="font-size:1rem">· zusammen ${eur(total*t.ids.length)}</span>`:eur(total)}</div></div>
       ${items?`<button class="btn alarm" data-act="alarm">Alarm – später weiter</button><button class="btn" data-act="clear">Leeren</button>`:""}
-      <button class="btn primary" data-act="book" ${items&&canWrite()?"":"disabled"}>${t.t==="m"?`Auf ${esc(firstName(t.label))} buchen`:t.t==="o"?"Auf die Wehr buchen":`Auf ${esc(firstName(mName(t.r.payer)))} buchen`}</button></div>
+      <button class="btn primary" data-act="book" ${items&&canWrite()?"":"disabled"}>${t.t==="m"?`Auf ${esc(firstName(t.label))} buchen`:t.t==="o"?"Auf die Wehr buchen":t.t==="b"?"Bar kassieren":t.t==="x"?`Für alle ${t.ids.length} buchen`:`Auf ${esc(firstName(mName(t.r.payer)))} buchen`}</button></div>
   </div>`;
 }
 
@@ -725,11 +743,12 @@ function vAdmin(){
   if (!adminOpen()) return `<div class="stack" style="max-width:360px;margin:0 auto;text-align:center"><h2>Verwaltung gesperrt</h2><p class="muted" style="margin:0">PIN des Kassenwarts eingeben.</p>
     <div class="pindots" id="pinDots">${[0,1,2,3,4,5].map(()=>"<i></i>").join("")}</div>
     <div class="pinpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="pin" data-k="${n}">${n}</button>`).join("")}<button data-act="pin" data-k="c" aria-label="Löschen">⌫</button><button data-act="pin" data-k="0">0</button><button data-act="pin" data-k="ok" style="background:var(--red);color:var(--red-ink);border-color:var(--red)">OK</button></div></div>`;
-  const tabs=[["konten","Konten"],["ae","Abzugsliste"],["einsaetze","Einsatzverpflegung"],["kasse","Kassenbuch"],["stamm","Stammdaten"],["abschluss","Abschluss & Einstellungen"]];
-  const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, abschluss:aClose}[UI.adminTab]||aKonten)();
+  const tabs=[["konten","Konten"],["ae","Abzugsliste"],["einsaetze","Einsatzverpflegung"],["kasse","Kassenbuch"],["stamm","Stammdaten"],["protokoll","Protokoll"],["abschluss","Abschluss & Einstellungen"]];
+  const body = ({konten:aKonten, ae:aAE, einsaetze:aOps, kasse:aKasse, stamm:aStamm, protokoll:aLog, abschluss:aClose}[UI.adminTab]||aKonten)();
   return `<div class="stack">
     <div class="row between"><div><div class="eyebrow">Kassenwart</div><h2>Verwaltung</h2></div>${S.settings.pinHash?`<button class="btn" data-act="lock">Sperren</button>`:""}</div>
     ${!S.settings.pinHash?`<div class="note">Noch keine PIN gesetzt: Am Kantinen-Tablet kann jeder die Verwaltung öffnen. Unter „Abschluss &amp; Einstellungen“ eine PIN festlegen.</div>`:""}
+    ${quarterNote()}${tokenNote(30)}
     <div class="seg" role="tablist">${tabs.map(([k,l])=>`<button data-act="atab" data-tab="${k}" aria-pressed="${UI.adminTab===k}">${l}</button>`).join("")}</div>
     ${body}</div>`;
 }
@@ -743,9 +762,9 @@ function aKonten(){
       <div class="kpi"><span class="eyebrow">Kassenstand</span><b class="num">${eur(cashBalance())}</b><span class="hint">laut Kassenbuch</span></div></div>
     <section class="section"><div class="row between"><h3>Konten</h3><div class="row">
       <label class="row" style="gap:6px;font-weight:600"><input type="checkbox" id="debtOnly" ${UI.debtOnly?"checked":""}> Nur offene</label>
-      <button class="btn" data-act="pay">Einzahlung erfassen</button><button class="btn" data-act="csv">Kontenliste exportieren</button></div></div>
+      <button class="btn" data-act="pay">Einzahlung erfassen</button><button class="btn" data-act="stmtall">Kontoauszüge (PDF)</button><button class="btn" data-act="csv">Kontenliste exportieren</button></div></div>
       <div class="tbl-wrap"><table><thead><tr><th>Name</th><th class="r">Kontostand</th><th>Letzte Buchung</th><th></th></tr></thead><tbody>
-      ${rows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td class="r num"><b class="${r.bal<0?"neg":r.bal>0?"pos":""}">${eur(r.bal)}</b></td><td class="muted">${r.last?tsStr(r.last):"–"}</td><td class="r"><button class="btn small" data-act="pay" data-id="${r.id}">${r.bal<0?"Ausgleichen":"Einzahlung"}</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">${UI.debtOnly?"Niemand hat offene Beträge.":"Noch keine Mitglieder."}</td></tr>`}
+      ${rows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td class="r num"><b class="${r.bal<0?"neg":r.bal>0?"pos":""}">${eur(r.bal)}</b></td><td class="muted">${r.last?tsStr(r.last):"–"}</td><td class="r" style="white-space:nowrap"><button class="btn small" data-act="stmt" data-id="${r.id}">Auszug</button> <button class="btn small" data-act="pay" data-id="${r.id}">${r.bal<0?"Ausgleichen":"Einzahlung"}</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">${UI.debtOnly?"Niemand hat offene Beträge.":"Noch keine Mitglieder."}</td></tr>`}
       </tbody></table></div></section>`;
 }
 function aOps(){
@@ -877,6 +896,11 @@ function aClose(){
       <div class="panel stack"><p style="margin:0">Der Abschluss fasst alle Buchungen und Einzahlungen bis jetzt pro Person zu einem Übertrag zusammen. Kontostände, Bestände, Leergut, Einsatzverpflegung und Statistik bleiben erhalten, die Einzelbuchungen werden gelöscht. Empfohlen einmal im Monat oder Quartal – vorher die Buchungen exportieren.</p>
       <p class="muted" style="margin:0">Aktuell ${nB} Einzelbuchungen seit dem letzten Abschluss.</p>
       <div class="row"><button class="btn" data-act="csvtx">Alle Buchungen exportieren</button><button class="btn danger" data-act="close" ${nB?"":"disabled"}>Abschluss durchführen</button></div></div></section>
+    <section class="section"><h3>Jahresabschluss für die Kassenprüfung</h3>
+      <div class="panel stack"><p style="margin:0">Zusammenfassung als PDF für Kassenprüfung und Jahreshauptversammlung: Kasse mit Einnahmen und Ausgaben, Umsatz, Abzugslisten, Einsatzverpflegung, offene Beträge und Warenbestand – mit Unterschriftszeilen.</p>
+      <div class="row"><label class="f" style="width:140px">Jahr<select id="yrSel">${(()=>{ const ys=new Set([new Date().getFullYear()]); list("cash").forEach(c=>c.date&&ys.add(+c.date.slice(0,4))); Object.keys(S.stats).forEach(ym=>ys.add(+ym.slice(0,4))); return [...ys].sort((a,b)=>b-a).map(y=>`<option>${y}</option>`).join(""); })()}</select></label>
+      <button class="btn primary" data-act="yearpdf" style="align-self:flex-end">Jahresabschluss als PDF</button></div>
+      <p class="muted small" style="margin:0">Tipp: Den Jahresabschluss vor dem letzten Abschluss des Jahres erstellen, dann sind alle Einzelbuchungen noch enthalten.</p></div></section>
     <section class="section"><h3>Datensicherung</h3>
       <div class="panel stack"><p style="margin:0">Lade regelmäßig – z. B. nach jedem Abschluss – eine komplette Sicherung herunter und bewahre sie auf einem USB-Stick oder im Vereins-Laufwerk auf. Die Datei enthält alle Kantinendaten und die persönlichen Codes; bitte vertraulich behandeln.</p>
       <div class="row"><button class="btn" data-act="backup">Sicherung herunterladen</button>${canWrite()?`<label class="btn" for="restoreFile">Sicherung wiederherstellen …</label><input type="file" id="restoreFile" accept="application/json,.json" hidden>`:""}</div>
@@ -888,32 +912,51 @@ function aClose(){
       <div class="row" style="align-self:end"><button class="btn primary" type="submit">Speichern</button>${S.settings.pinHash?`<button class="btn" type="button" data-act="pinrm">Admin-PIN entfernen</button>`:""}${S.settings.teamPinHash?`<button class="btn" type="button" data-act="tpinrm">Team-PIN entfernen</button>`:""}</div></form></section>
     <section class="section"><h3>Geräte &amp; Sicherheit</h3>
       <div class="panel stack"><div class="row between"><span>Dieses Gerät: <b>${esc(S.email||"")}</b></span><span class="muted small">${esc(syncLabel())}</span></div>
+      <form class="row" id="tokForm"><label class="f" style="width:200px">Zugangsschlüssel gültig bis<input type="date" id="tokExp" value="${esc(tokenExpiry())}"></label><button class="btn" type="submit" style="align-self:flex-end">Speichern</button><span class="hint" style="align-self:flex-end">Steht bei GitHub beim Schlüssel. 30 Tage vorher erscheint ein Hinweis.</span></form>
       <div class="row"><button class="btn" data-act="syncnow">Jetzt abgleichen</button><button class="btn" data-act="pwchange">Kantinen-Passwort ändern</button><button class="btn danger" data-act="logout">Gerät abmelden</button></div>
       <p class="muted small" style="margin:0">Weiteres Gerät, z. B. der PC zu Hause: Adresse der Kantine öffnen, Zugangsschlüssel und Kantinen-Passwort eingeben. Ein verlorenes Gerät sperrst du, indem du in GitHub einen neuen Zugangsschlüssel erzeugst und den alten löschst (siehe Anleitung).</p></div></section>`;
 }
 
 // ================= Actions =================
 let pinBuf="", tpinBuf="";
-async function bookCart(){
+async function bookCart(paid){
   const t=target(UI.sel); if(!t) return;
   const cart=cartOf(t.key);
   const lines = Object.entries(cart).filter(([pid,q])=>q>0 && S.products[pid]);
   if (!lines.length) return;
-  const ts=Date.now(); const ids=[];
-  const base = {...(t.t==="m"?{m:t.id} : t.t==="o"?{o:t.id} : {m:t.r.payer, r:t.id}), by:S.email||""};
+  const per = lines.reduce((s,[pid,q])=>s+S.products[pid].price*q,0);
+  if (t.t==="b" && !paid){ cashModal(per); return; }
+  const ts=Date.now(); const ids=[]; let cashId=null;
+  const bases = t.t==="x" ? t.ids.map(m=>({m})) : [t.t==="m"?{m:t.id} : t.t==="o"?{o:t.id} : t.t==="b"?{cash:true} : {m:t.r.payer, r:t.id}];
+  const desc = lines.map(([pid,q])=>`${q}× ${S.products[pid].name}`).join(", ");
   const ok = await w(async db=>{
-    for (const [pid,q] of lines){ const p=S.products[pid]; const ref=db.collection("bookings").doc(); ids.push(ref.id);
-      await ref.set({...base,p:pid,n:p.name,price:p.price,qty:q,ts}); }
+    for (const base of bases) for (const [pid,q] of lines){ const p=S.products[pid]; const ref=db.collection("bookings").doc(); ids.push(ref.id);
+      await ref.set({...base, by:S.email||"", p:pid, n:p.name, price:p.price, qty:q, ts}); }
+    if (t.t==="b"){ const ref=db.collection("cash").doc(); cashId=ref.id; await ref.set({date:today(), type:"in", amount:per, text:`Barverkauf: ${desc}`.slice(0,100), cat:"Barverkauf", receipt:"", ts, by:S.email||""}); }
   });
   if (!ok) return;
-  const total = lines.reduce((s,[pid,q])=>s+S.products[pid].price*q,0);
-  const who = t.t==="m"?t.label : t.t==="o"?t.label : `die Runde von ${mName(t.r.payer)}`;
+  const total = per*bases.length;
+  const who = t.t==="m"?t.label : t.t==="o"?t.label : t.t==="b"?"Barverkauf" : t.t==="x"?`${t.ids.length} Mitglieder` : `die Runde von ${mName(t.r.payer)}`;
   setCart(t.key,{});
-  if (t.t==="m"){ UI.sel=null; UI.search=""; }
+  if (t.t==="m" || t.t==="x"){ UI.sel=null; UI.search=""; }
+  if (t.t==="x"){ UI.multi=false; UI.msel=[]; }
   render(); window.scrollTo({top:0});
-  toast(`${lines.map(([pid,q])=>`${q}× ${S.products[pid].name}`).join(", ")} für ${who} gebucht · ${eur(total)}`, {label:"Rückgängig", fn: async()=>{
-    await w(async db=>{ for (const id of ids) await db.doc("bookings/"+id).delete(); }, "Buchung zurückgenommen");
+  toast(`${desc} ${t.t==="b"?"bar kassiert":`für ${who} gebucht`} · ${eur(total)}`, {label:"Rückgängig", fn: async()=>{
+    await w(async db=>{ for (const id of ids) await db.doc("bookings/"+id).delete(); if (cashId) await db.doc("cash/"+cashId).delete(); }, "Buchung zurückgenommen");
   }});
+}
+function cashModal(total){
+  modal(`<h3>Bar kassieren</h3>
+    <div class="row between"><span class="muted">Zu zahlen</span><b class="num" style="font-size:2rem;font-family:var(--f-display)">${eur(total)}</b></div>
+    <label class="f">Gegeben (optional)<input type="text" id="cashGiven" inputmode="decimal" placeholder="z. B. 10,00"></label>
+    <div class="row">${[5,10,20,50].filter(v=>v*100>=total).map(v=>`<button class="btn small" type="button" data-given="${v*100}">${v} €</button>`).join("")}<button class="btn small" type="button" data-given="${total}">passend</button></div>
+    <div class="row between"><span class="muted">Rückgeld</span><b class="num" id="cashBack" style="font-size:1.6rem;font-family:var(--f-display)">–</b></div>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cashOk">Bezahlt – buchen</button></div>`, r=>{
+    const inp=r.querySelector("#cashGiven"), out=r.querySelector("#cashBack");
+    const upd=()=>{ const g=parseEur(inp.value); out.textContent = isNaN(g) ? "–" : g<total ? `fehlen ${eur(total-g)}` : eur(g-total); out.className="num"+(!isNaN(g)&&g<total?" neg":""); };
+    inp.oninput=upd; r.querySelectorAll("[data-given]").forEach(b=>b.onclick=()=>{ inp.value=centsIn(+b.dataset.given); upd(); });
+    r.querySelector("#cashOk").onclick=async()=>{ r.querySelector("#cashOk").disabled=true; closeModal(); await bookCart(true); };
+  });
 }
 
 function opForm(id){
@@ -1194,8 +1237,10 @@ async function restoreBackup(file){
   if (!data || data.app!=="kantine" || !Array.isArray(data.docs)){ toast("Die Datei ist keine Kantinen-Sicherung."); return; }
   confirmBox("Sicherung wiederherstellen", `Sicherung vom ${esc(new Date(data.created).toLocaleString("de-DE"))} mit ${data.docs.length} Einträgen einspielen? Vorhandene Einträge mit gleicher Kennung werden überschrieben, neuere Einträge bleiben erhalten.`, "Wiederherstellen", async()=>{
     try{
-      for (const d of data.docs) await api.set(d.col, d.id, d.data);
-      for (const c of (data.codes||[])) await api.set("codes", c.member_id, {code:c.code});
+      LOG_MUTE++;
+      try{ for (const d of data.docs) await api.set(d.col, d.id, d.data);
+      for (const c of (data.codes||[])) await api.set("codes", c.member_id, {code:c.code}); } finally { LOG_MUTE--; }
+      addLog(`Sicherung vom ${new Date(data.created).toLocaleString("de-DE")} eingespielt`, "system");
       toast("Sicherung eingespielt – wird abgeglichen."); syncNow();
     }catch(e){ toast(errText(e)); }
   }, true);
@@ -1223,7 +1268,8 @@ function runClose(){
     const memW=list("members").map(m=>[m.id, balance(m.id)]);
     const opW=[...new Set(bk.filter(b=>b.o).map(b=>b.o))].filter(id=>S.ops[id]).map(id=>[id, opTotals(id)]);
     const rW=[...new Set(bk.filter(b=>b.r).map(b=>b.r))].filter(id=>S.rounds[id]).map(id=>[id, roundTotal(id)]);
-    await w(async db=>{
+    LOG_MUTE++;
+    try{ await w(async db=>{
       for (const [ym,d] of Object.entries(statsW)) await db.doc("stats/"+ym).set(d);
       for (const [id,d] of prodW) await db.doc("products/"+id).update(d);
       for (const [id,c] of memW) await db.doc("members/"+id).update({carry:c, closedAt:now});
@@ -1231,8 +1277,291 @@ function runClose(){
       for (const [id,t] of rW) await db.doc("rounds/"+id).update({carryTotal:t});
       for (const b of bk) await db.doc("bookings/"+b.id).delete();
       for (const p of py) await db.doc("payments/"+p.id).delete();
-    }, "Abschluss erledigt");
+    }, "Abschluss erledigt"); } finally { LOG_MUTE--; }
+    addLog(`Abschluss durchgeführt: ${bk.length} Buchungen und ${py.length} Zahlungen zusammengefasst`, "system");
   }, true);
+}
+
+// ================= Änderungsprotokoll =================
+let LOG_MUTE = 0;
+const LOGCOLS = {members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
+const LOGCAT = {members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
+function fmtVal(k, v){
+  if (v==null || v==="") return "–";
+  if (["price","pfand","crateP","amount","cashStart"].includes(k)) return eur(v);
+  if (typeof v==="boolean") return v?"ja":"nein";
+  if (k==="mhd") return dDate(v);
+  return String(v);
+}
+function diffText(label, before, patch, names){
+  const parts=[];
+  for (const [k,lab] of Object.entries(names)) if (k in patch && JSON.stringify(patch[k])!==JSON.stringify(before?before[k]:undefined)) parts.push(`${lab}: ${fmtVal(k, before&&before[k])} -> ${fmtVal(k, patch[k])}`);
+  return parts.length ? `${label} – ${parts.join(", ")}` : null;
+}
+function describeOp(op, before){
+  const d=op.data||{};
+  switch(op.col){
+    case "members":
+      if (op.t==="del") return `Mitglied gelöscht: ${before?before.name:op.id}`;
+      if (op.t==="set" && !before) return `Mitglied angelegt: ${d.name}`;
+      return diffText(`Mitglied ${before?before.name:""}`, before, d, {name:"Name", active:"in der Strichliste"});
+    case "products":
+      if (op.t==="del") return `Artikel gelöscht: ${before?before.name:op.id}`;
+      if (op.t==="set" && !before) return `Artikel angelegt: ${d.name} (${eur(d.price)})`;
+      return diffText(`Artikel ${before?before.name:""}`, before, d, {name:"Name", price:"Preis", cat:"Kategorie", active:"im Verkauf", min:"Mindestbestand", base:"Bestand", mhd:"MHD", pfand:"Pfand", track:"Bestand zählen"});
+    case "payments":
+      return op.t==="set" ? `Zahlung ${eurS(d.amount)} für ${mName(d.m)} (${d.note||"ohne Art"})` : null;
+    case "cash":
+      if (op.t==="del") return before ? `Kassenbuch-Eintrag gelöscht: ${before.text} (${eur(before.amount)})` : null;
+      if (op.t==="set" && !before) return d.cat==="Barverkauf" ? null : `Kassenbuch: ${d.type==="out"?"Ausgabe":"Einnahme"} ${eur(d.amount)} – ${d.text}`;
+      return diffText(`Kassenbuch-Eintrag ${before?before.text:""}`, before, d, {date:"Datum", type:"Art", amount:"Betrag", text:"Text", cat:"Kategorie"});
+    case "settlements": return op.t==="set" ? `Abzugsliste gebucht: ${d.label} (${eur(d.total||0)})` : null;
+    case "codes": return op.t==="set" ? `Neuer QR-Code für ${mName(op.id)}` : null;
+    case "events":
+      if (op.t==="del") return `Termin gelöscht: ${before?before.title:""}`;
+      if (op.t==="set" && !before) return `Termin angelegt: ${d.title} (${dDate(d.date)})`;
+      if (d.billed && before && !before.billed) return `Terminkosten auf Konten gebucht: ${before.title}`;
+      return diffText(`Termin ${before?before.title:""}`, before, d, {title:"Titel", date:"Datum", price:"Kosten pro Person"});
+    case "bookings":
+      return op.t==="del" && before ? `Storno: ${before.qty}× ${before.n} (${before.cash?"Barverkauf":before.o?(S.ops[before.o]?.title||"Einsatz"):mName(before.m)})` : null;
+    case "settings": {
+      const parts=[]; const b=before||{};
+      if ("pinHash" in d && d.pinHash!==b.pinHash) parts.push(d.pinHash?"Admin-PIN geändert":"Admin-PIN entfernt");
+      if ("teamPinHash" in d && d.teamPinHash!==b.teamPinHash) parts.push(d.teamPinHash?"Team-PIN geändert":"Team-PIN entfernt");
+      if ("unit" in d && d.unit!==b.unit) parts.push(`Name der Wehr: ${d.unit||"–"}`);
+      if ("cashStart" in d && d.cashStart!==b.cashStart) parts.push(`Anfangsbestand Kasse: ${eur(d.cashStart)}`);
+      if ("tokenExp" in d && d.tokenExp!==b.tokenExp) parts.push(`Zugangsschlüssel gültig bis ${dDate(d.tokenExp)}`);
+      return parts.length ? `Einstellungen: ${parts.join(", ")}` : null;
+    }
+  }
+  return null;
+}
+function logOps(op, before){
+  if (LOG_MUTE || !LOGCOLS[op.col]) return [];
+  let txt=null; try{ txt=describeOp(op, before); }catch(e){}
+  return txt ? [logEntry(txt, op.col)] : [];
+}
+function logEntry(text, cat){ return {t:"set", col:"log", id:randId(10), data:{ts:Date.now(), dev:S.email||"Gerät", text:String(text).slice(0,300), cat}, ts:Date.now(), dev:DEV}; }
+function addLog(text, cat){ PENDING.push(logEntry(text, cat||"system")); rebuild(); persist(); schedule(); scheduleSync(); }
+function pruneLog(){
+  const ids=Object.entries(S.log||{}).sort((a,b)=>(a[1].ts||0)-(b[1].ts||0)).map(x=>x[0]);
+  if (ids.length>1500) for (const id of ids.slice(0, ids.length-1300)) PENDING.push({t:"del", col:"log", id, ts:Date.now(), dev:DEV});
+}
+function aLog(){
+  const f=UI.logFilter||"";
+  const all=list("log").sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const cats=["Artikel & Preise","Mitglieder","Zahlungen & Kasse","Stornos","Sonstiges"];
+  const rows=all.filter(x=>!f || LOGCAT[x.cat]===f);
+  return `<div class="row between"><div class="seg" role="group" aria-label="Filter"><button data-act="logf" data-f="" aria-pressed="${!f}">Alle</button>${cats.map(c=>`<button data-act="logf" data-f="${c}" aria-pressed="${f===c}">${c}</button>`).join("")}</div>
+      <button class="btn" data-act="logcsv">Protokoll exportieren</button></div>
+    ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Gerät</th><th>Änderung</th></tr></thead><tbody>
+      ${rows.slice(0,400).map(x=>`<tr><td class="num" style="white-space:nowrap">${tsStr(x.ts)}</td><td class="muted">${esc(x.dev||"")}</td><td>${esc(x.text).replace(/ -&gt; /g," → ")}</td></tr>`).join("")}
+    </tbody></table></div>${rows.length>400?`<p class="muted small" style="margin:0">Angezeigt: die neuesten 400 von ${rows.length}. Alle im Export.</p>`:""}`
+    :`<div class="empty"><b>Noch keine Einträge.</b><span>Hier erscheint, wer wann an welchem Gerät Preise, Mitglieder, Zahlungen, Kassenbuch oder Einstellungen geändert hat und welche Buchungen storniert wurden.</span></div>`}
+    <p class="muted small" style="margin:0">Das Protokoll speichert die letzten etwa 1.500 Änderungen.</p>`;
+}
+
+// ================= Quartal & Zugangsschlüssel =================
+function quarterOf(d){ d=d||new Date(); const q=Math.floor(d.getMonth()/3); return {q:q+1, y:d.getFullYear(), start:new Date(d.getFullYear(), q*3, 1), end:new Date(d.getFullYear(), q*3+3, 0), label:`${q+1}. Quartal ${d.getFullYear()}`}; }
+const isoD = d => isoLocal(d.getTime()+12*3600e3);
+function daysUntil(iso){ return Math.round((new Date(iso+"T12:00:00") - new Date(today()+"T12:00:00"))/DAY); }
+function quarterNote(){
+  const Q=quarterOf(); const left=daysUntil(isoD(Q.end));
+  const btns=`<span class="row" style="margin-top:6px"><button class="btn small" data-act="atab" data-tab="ae">Zur Abzugsliste</button><button class="btn small" data-act="backup">Sicherung herunterladen</button></span>`;
+  if (left<=7) return `<div class="note">${left===0?`Das ${Q.label} endet heute`:`Das ${Q.label} endet in ${left} ${left===1?"Tag":"Tagen"} (am ${dDate(isoD(Q.end))})`} – Abzugsliste erstellen und Sicherung herunterladen.${btns}</div>`;
+  const P=quarterOf(new Date(Q.start.getTime()-DAY)); const since=daysUntil(isoD(Q.start))*-1;
+  const done=list("settlements").some(s=>s.date && s.date>=isoD(new Date(P.end.getTime()-21*DAY)));
+  const open=membersActive().some(m=>balance(m.id)<0);
+  if (since<=21 && !done && open) return `<div class="note">Für das ${P.label} wurde noch keine Abzugsliste gebucht.${btns}</div>`;
+  return "";
+}
+function tokenExpiry(){ return ls.get("kantine.tokenexp") || S.settings.tokenExp || ""; }
+function tokenNote(maxDays){
+  const exp=tokenExpiry(); if (!exp) return "";
+  const d=daysUntil(exp); if (d>maxDays) return "";
+  return `<div class="note" style="${d<0?"background:var(--bad-soft);color:var(--bad)":""}">${d<0?`Der GitHub-Zugangsschlüssel ist am ${dDate(exp)} abgelaufen.`:`Der GitHub-Zugangsschlüssel läuft ${d===0?"heute":`in ${d} ${d===1?"Tag":"Tagen"}`} ab (am ${dDate(exp)}).`} Bitte einen neuen erzeugen und die Geräte neu verbinden – siehe Anleitung, „Zugangsschlüssel abgelaufen“.</div>`;
+}
+
+// ================= PDF =================
+let PDFLIB=null;
+function loadPdfLib(){
+  if (PDFLIB) return PDFLIB;
+  PDFLIB = new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="vendor/jspdf.umd.min.js"; s.onload=()=>res(window.jspdf.jsPDF); s.onerror=()=>{ PDFLIB=null; rej(new Error("PDF-Bibliothek nicht geladen")); }; document.head.appendChild(s); });
+  return PDFLIB;
+}
+async function logoDataUrl(){
+  if (!LOGO_OK) return null;
+  try{ const img=document.getElementById("logo"); const c=document.createElement("canvas"); c.width=img.naturalWidth; c.height=img.naturalHeight; c.getContext("2d").drawImage(img,0,0); return {url:c.toDataURL("image/png"), ratio:img.naturalWidth/img.naturalHeight}; }catch(e){ return null; }
+}
+const pdfSafe = t => String(t??"").replace(/→/g,"->").replace(/[^\x00-\xFF€–—‚„“”‘’•…·×]/g,"?");
+function pdfKit(doc, logo){
+  const L=15, R=195, BOTTOM=282;
+  const k = { doc, y:15, page:1 };
+  k.header = (title, sub) => {
+    let x=L;
+    if (logo){ const h=20, w=h*logo.ratio; doc.addImage(logo.url,"PNG",L,12,w,h); x=L+w+5; }
+    doc.setFont("helvetica","bold"); doc.setFontSize(17); doc.setTextColor(27,39,86); doc.text(pdfSafe(title), x, 20);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(90,96,110); doc.text(pdfSafe(sub), x, 26.5);
+    doc.setDrawColor(210,22,30); doc.setLineWidth(0.8); doc.line(L, 36, R, 36); doc.setTextColor(0);
+    k.y=44;
+  };
+  k.need = h => { if (k.y+h>BOTTOM){ doc.addPage(); k.page++; k.y=18; return true; } return false; };
+  k.h2 = t => { k.need(14); doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(27,39,86); doc.text(pdfSafe(t), L, k.y); doc.setTextColor(0); k.y+=6; };
+  k.p = (t, opt={}) => { doc.setFont("helvetica", opt.bold?"bold":"normal"); doc.setFontSize(opt.size||9.5); const lines=doc.splitTextToSize(pdfSafe(t), R-L); k.need(lines.length*4.6); if (opt.muted) doc.setTextColor(100); doc.text(lines, L, k.y); doc.setTextColor(0); k.y+=lines.length*4.6+1.5; };
+  const fit = (t,w) => { t=pdfSafe(t); if (doc.getTextWidth(t)<=w) return t; while (t.length>1 && doc.getTextWidth(t+"…")>w) t=t.slice(0,-1); return t+"…"; };
+  k.table = (cols, rows, opt={}) => {
+    const total=cols.reduce((s,c)=>s+c.w,0), scale=(R-L)/total;
+    const head = () => { doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(90,96,110); let x=L; cols.forEach(c=>{ const w=c.w*scale; doc.text(pdfSafe(c.h), c.align==="r"?x+w-1:x+1, k.y, {align:c.align==="r"?"right":"left"}); x+=w; }); doc.setTextColor(0); k.y+=1.8; doc.setDrawColor(190); doc.setLineWidth(0.2); doc.line(L,k.y,R,k.y); k.y+=4.2; };
+    k.need(16); head();
+    rows.forEach((r,i)=>{
+      const bold = r._bold; if (k.need(6)) head();
+      doc.setFont("helvetica", bold?"bold":"normal"); doc.setFontSize(9.5);
+      if (r._shade){ doc.setFillColor(243,244,246); doc.rect(L, k.y-4, R-L, 5.8, "F"); }
+      let x=L; cols.forEach((c,j)=>{ const w=c.w*scale; const v=fit(r[j]==null?"":r[j], w-2); doc.text(v, c.align==="r"?x+w-1:x+1, k.y, {align:c.align==="r"?"right":"left"}); x+=w; });
+      k.y+=5.8;
+    });
+    k.y+=3;
+  };
+  k.footer = text => { const n=doc.getNumberOfPages(); for (let i=1;i<=n;i++){ doc.setPage(i); doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(120); doc.text(pdfSafe(text), L, 290); doc.text(`Seite ${i} von ${n}`, R, 290, {align:"right"}); } doc.setTextColor(0); };
+  return k;
+}
+async function deliverPdf(doc, filename){
+  const blob=doc.output("blob"); const url=URL.createObjectURL(blob);
+  const file = (()=>{ try{ return new File([blob], filename, {type:"application/pdf"}); }catch(e){ return null; } })();
+  const canShare = !!(file && navigator.canShare && navigator.canShare({files:[file]}));
+  modal(`<h3>PDF erstellt</h3><p class="muted" style="margin:0">${esc(filename)}</p>
+    <div class="actions" style="justify-content:flex-start">${canShare?`<button class="btn primary" id="pdfShare">Teilen …</button>`:""}<a class="btn ${canShare?"":"primary"}" href="${url}" download="${esc(filename)}">Herunterladen</a><a class="btn" href="${url}" target="_blank" rel="noopener">Öffnen &amp; drucken</a><button class="btn ghost" data-close>Schließen</button></div>`, r=>{
+    const b=r.querySelector("#pdfShare"); if (b) b.onclick=async()=>{ try{ await navigator.share({files:[file], title:filename}); }catch(e){} };
+  });
+}
+const pdfName = s => s.replace(/[\\/:*?"<>|]/g,"-");
+
+// --- Kontoauszug
+function periodRange(kind){
+  const Q=quarterOf();
+  if (kind==="q") return {from:Q.start.getTime(), to:Date.now(), label:Q.label};
+  if (kind==="pq"){ const P=quarterOf(new Date(Q.start.getTime()-DAY)); return {from:P.start.getTime(), to:P.end.getTime()+DAY-1, label:P.label}; }
+  return {from:0, to:Date.now(), label:"alle Buchungen seit dem letzten Abschluss"};
+}
+function statementData(mid, range){
+  const m=S.members[mid];
+  const items=[...list("bookings").filter(b=>b.m===mid).map(b=>({ts:b.ts, text:`${b.qty}× ${b.n}${b.r?` (Runde${S.rounds[b.r]?.reason?`: ${S.rounds[b.r].reason}`:""})`:""}`, amt:-(b.price*(b.qty||1))})),
+               ...list("payments").filter(p=>p.m===mid).map(p=>({ts:p.ts, text:p.note||"Gutschrift", amt:p.amount}))].sort((a,b)=>a.ts-b.ts);
+  const opening=(m.carry||0)+items.filter(x=>x.ts<range.from).reduce((s,x)=>s+x.amt,0);
+  const rows=items.filter(x=>x.ts>=range.from && x.ts<=range.to);
+  const closing=opening+rows.reduce((s,x)=>s+x.amt,0);
+  return {m, opening, rows, closing, closedAt:m.closedAt||0};
+}
+async function statementPdf(ids, kind){
+  let JsPDF; try{ JsPDF=await loadPdfLib(); }catch(e){ toast("PDF-Funktion konnte nicht geladen werden. Internet prüfen und erneut versuchen."); return; }
+  const doc=new JsPDF({unit:"mm", format:"a4"}); const logo=await logoDataUrl(); const range=periodRange(kind);
+  ids.forEach((mid,i)=>{
+    if (i>0) doc.addPage();
+    const d=statementData(mid, range); const k=pdfKit(doc, logo);
+    k.header("Kontoauszug Kantine", `${S.settings.unit||WEHR}${CFG.untertitel?` · ${CFG.untertitel}`:""}`);
+    doc.setFont("helvetica","bold"); doc.setFontSize(14); doc.text(pdfSafe(d.m.name), 15, k.y); k.y+=6;
+    k.p(`Zeitraum: ${range.label}${kind!=="all"?` (${new Date(range.from).toLocaleDateString("de-DE")} – ${new Date(Math.min(range.to,Date.now())).toLocaleDateString("de-DE")})`:""}`, {muted:true});
+    if (d.closedAt && d.closedAt>range.from) k.p(`Hinweis: Buchungen vor dem Abschluss am ${new Date(d.closedAt).toLocaleDateString("de-DE")} sind im Anfangssaldo zusammengefasst.`, {muted:true, size:8.5});
+    k.y+=2;
+    const rows=[["", "Anfangssaldo", eur(d.opening)].concat([]).map(x=>x)];
+    rows[0]._shade=true;
+    d.rows.forEach(x=>rows.push([new Date(x.ts).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}), x.text, eurS(x.amt)]));
+    if (!d.rows.length) rows.push(["", "Keine Buchungen in diesem Zeitraum.", ""]);
+    const end=["", "Kontostand am Ende des Zeitraums", eur(d.closing)]; end._bold=true; end._shade=true; rows.push(end);
+    k.table([{h:"Datum",w:34},{h:"Buchung",w:110},{h:"Betrag",w:30,align:"r"}], rows);
+    k.p(d.closing<0 ? `Offener Betrag ${eur(-d.closing)} – wird mit der nächsten Aufwandsentschädigung verrechnet.` : d.closing>0 ? `Guthaben ${eur(d.closing)}.` : "Das Konto ist ausgeglichen.", {bold:true});
+  });
+  const k=pdfKit(doc,null); k.footer(`Erstellt am ${new Date().toLocaleString("de-DE")} · ${S.email||""} · Kantine ${CFG.kurz||WEHR}`);
+  const name = ids.length===1 ? `Kontoauszug ${S.members[ids[0]].name} ${range.label}.pdf` : `Kontoauszüge ${range.label}.pdf`;
+  deliverPdf(doc, pdfName(name));
+}
+function statementModal(mid){
+  const many=!mid; const Q=quarterOf(); const P=quarterOf(new Date(Q.start.getTime()-DAY));
+  modal(`<h3>${many?"Kontoauszüge für alle":"Kontoauszug "+esc(S.members[mid].name)}</h3>
+    <p class="muted" style="margin:0">${many?"Eine PDF mit einer Seite pro Mitglied – zum Drucken oder Weitergeben.":"Als PDF zum Teilen oder Drucken."}</p>
+    <label class="f">Zeitraum<select id="stKind"><option value="q">${Q.label} (laufend)</option><option value="pq">${P.label}</option><option value="all">Alle Buchungen seit dem letzten Abschluss</option></select></label>
+    ${many?`<label class="row" style="font-weight:600"><input type="checkbox" id="stOnly" checked> Nur Mitglieder mit Buchungen oder offenem Betrag</label>`:""}
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="stGo">PDF erstellen</button></div>`, r=>{
+    r.querySelector("#stGo").onclick=async()=>{
+      const kind=r.querySelector("#stKind").value; let ids=mid?[mid]:membersActive().map(m=>m.id);
+      if (many && r.querySelector("#stOnly").checked){ const rg=periodRange(kind); ids=ids.filter(id=>{ const d=statementData(id,rg); return d.rows.length || d.closing!==0; }); }
+      if (!ids.length){ toast("Keine passenden Mitglieder."); return; }
+      r.querySelector("#stGo").disabled=true; r.querySelector("#stGo").textContent="Erstelle …";
+      await statementPdf(ids, kind);
+    };
+  });
+}
+
+// --- Jahresabschluss
+async function yearReportPdf(Y){
+  let JsPDF; try{ JsPDF=await loadPdfLib(); }catch(e){ toast("PDF-Funktion konnte nicht geladen werden. Internet prüfen und erneut versuchen."); return; }
+  const doc=new JsPDF({unit:"mm", format:"a4"}); const logo=await logoDataUrl(); const k=pdfKit(doc, logo);
+  const yStart=`${Y}-01-01`, yEnd=`${Y}-12-31`, now=today(), stich = now<yEnd ? now : yEnd;
+  k.header(`Jahresabschluss Kantine ${Y}`, `${S.settings.unit||WEHR}${CFG.untertitel?` · ${CFG.untertitel}`:""} · für die Kassenprüfung`);
+  k.p(`Berichtszeitraum 01.01.${Y} – ${dDate(stich)}. Alle Beträge in Euro.`, {muted:true});
+
+  // 1 Kasse
+  const all=cashSorted(); let start=S.settings.cashStart||0;
+  for (const c of all) if ((c.date||"")<yStart) start += c.type==="out"?-c.amount:c.amount;
+  const yc=all.filter(c=>(c.date||"")>=yStart && (c.date||"")<=yEnd);
+  const sumBy = type => { const m={}; yc.filter(c=>(type==="out")===(c.type==="out")).forEach(c=>{ m[c.cat||"Sonstiges"]=(m[c.cat||"Sonstiges"]||0)+c.amount; }); return m; };
+  const inn=sumBy("in"), out=sumBy("out"); const tin=Object.values(inn).reduce((a,b)=>a+b,0), tout=Object.values(out).reduce((a,b)=>a+b,0);
+  k.h2("1. Kantinenkasse");
+  const cr=[]; const s1=["Anfangsbestand 01.01.", "", eur(start)]; s1._shade=true; cr.push(s1);
+  Object.entries(inn).sort((a,b)=>b[1]-a[1]).forEach(([c,v])=>cr.push([`Einnahmen: ${c}`, `${yc.filter(x=>x.type!=="out"&&(x.cat||"Sonstiges")===c).length} Buchungen`, eur(v)]));
+  Object.entries(out).sort((a,b)=>b[1]-a[1]).forEach(([c,v])=>cr.push([`Ausgaben: ${c}`, `${yc.filter(x=>x.type==="out"&&(x.cat||"Sonstiges")===c).length} Buchungen`, "-"+eur(v)]));
+  const s2=[`Endbestand ${dDate(stich)}`, `Einnahmen ${eur(tin)} · Ausgaben ${eur(tout)}`, eur(start+tin-tout)]; s2._bold=true; s2._shade=true; cr.push(s2);
+  k.table([{h:"Position",w:70},{h:"",w:70},{h:"Betrag",w:35,align:"r"}], cr);
+  const miss=yc.filter(c=>c.type==="out" && !c.receipt).length;
+  k.p(miss ? `Ausgaben ohne hinterlegten Beleg: ${miss}. Einzelaufstellung im Kassenbuch-Export.` : "Zu allen Ausgaben ist ein Beleg hinterlegt.", {muted:true});
+
+  // 2 Umsatz
+  const agg=monthAgg(); const items={}; let rev=0, qty=0;
+  for (const [ym,o] of Object.entries(agg)) if (+ym.slice(0,4)===Y) for (const [pid,v] of Object.entries(o)){ const e=(items[pid]=items[pid]||{n:S.products[pid]?.name||v.n,q:0,c:0}); e.q+=v.q; e.c+=v.c; rev+=v.c; qty+=v.q; }
+  k.h2("2. Verkauf über die Strichliste");
+  k.p(`Umsatz ${eur(rev)} mit ${nf.format(qty)} Artikeln (angeschrieben, Einsatzverpflegung, Runden und Barverkauf).`);
+  const top=Object.values(items).sort((a,b)=>b.c-a.c);
+  if (top.length) k.table([{h:"Artikel",w:110},{h:"Stück",w:30,align:"r"},{h:"Umsatz",w:35,align:"r"}], top.slice(0,15).map(x=>[x.n, nf.format(x.q), eur(x.c)]));
+
+  // 3 Abzüge
+  const sets=list("settlements").filter(s=>(s.date||"").slice(0,4)===String(Y)).sort((a,b)=>a.date.localeCompare(b.date));
+  k.h2("3. Verrechnung mit der Aufwandsentschädigung");
+  if (sets.length){ const rows=sets.map(s=>[s.label, dDate(s.date), String((s.rows||[]).length), eur(s.total||0)]); const t=["Summe","","",eur(sets.reduce((a,s)=>a+(s.total||0),0))]; t._bold=true; t._shade=true; rows.push(t);
+    k.table([{h:"Abzugsliste",w:70},{h:"Stichtag",w:35},{h:"Personen",w:30,align:"r"},{h:"Betrag",w:40,align:"r"}], rows); }
+  else k.p("Keine Abzugslisten gebucht.", {muted:true});
+
+  // 4 Einsatzverpflegung
+  const ops=list("ops").filter(o=>(o.date||"").slice(0,4)===String(Y)).sort((a,b)=>a.date.localeCompare(b.date));
+  k.h2("4. Einsatzverpflegung (gegenüber der Gemeinde)");
+  if (ops.length){ let open=0, sum=0; const rows=ops.map(o=>{ const t=opTotals(o.id).total; sum+=t; if(!o.settled) open+=t; return [dDate(o.date), o.kind||"Einsatz", o.title, o.settled?"abgerechnet":"offen", eur(t)]; });
+    const t=["Summe","","",`davon offen ${eur(open)}`,eur(sum)]; t._bold=true; t._shade=true; rows.push(t);
+    k.table([{h:"Datum",w:24},{h:"Art",w:24},{h:"Stichwort",w:68},{h:"Status",w:34},{h:"Betrag",w:25,align:"r"}], rows); }
+  else k.p("Keine Einsatzverpflegung erfasst.", {muted:true});
+
+  // 5 Offene Beträge
+  const bals=membersActive().map(m=>({n:m.name,b:balance(m.id)}));
+  const neg=bals.filter(x=>x.b<0).sort((a,b)=>a.b-b.b), pos=bals.filter(x=>x.b>0);
+  k.h2(`5. Offene Beträge der Mitglieder (Stand ${dDate(now)})`);
+  k.p(`Offen zur Verrechnung: ${eur(-neg.reduce((a,x)=>a+x.b,0))} bei ${neg.length} Mitgliedern · Guthaben: ${eur(pos.reduce((a,x)=>a+x.b,0))} bei ${pos.length} Mitgliedern.`);
+  if (neg.length) k.table([{h:"Mitglied",w:130},{h:"offen",w:45,align:"r"}], neg.map(x=>[x.n, eur(-x.b)]));
+
+  // 6 Warenbestand
+  const ps=productsActive().filter(p=>p.track!==false);
+  k.h2(`6. Warenbestand (Stand ${dDate(now)})`);
+  if (ps.length){ let val=0; const rows=ps.map(p=>{ const s=Math.max(0,stock(p.id)); val+=s*p.price; return [p.name, units(s,p.crate), eur(p.price), eur(s*p.price)]; });
+    const t=["Summe Verkaufswert","","",eur(val)]; t._bold=true; t._shade=true; rows.push(t);
+    k.table([{h:"Artikel",w:80},{h:"Bestand",w:40},{h:"Preis",w:25,align:"r"},{h:"Wert",w:30,align:"r"}], rows);
+    const pf=productsActive().filter(p=>p.pfand>0).reduce((s,p)=>{ const e=empties(p.id); return s+e*p.pfand+(p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0); },0);
+    if (pf) k.p(`Leergut im Lager (geschätzt): ${eur(pf)} Pfand.`, {muted:true}); }
+  else k.p("Keine Artikel mit Bestandszählung.", {muted:true});
+
+  // Unterschriften
+  k.need(34); k.y+=14;
+  doc.setDrawColor(120); doc.setLineWidth(0.2);
+  [[15,"Kassenwart/in"],[80,"Kassenprüfer/in"],[145,"Kassenprüfer/in"]].forEach(([x,t])=>{ doc.line(x, k.y, x+50, k.y); doc.setFontSize(8.5); doc.setTextColor(100); doc.text(t, x, k.y+4.5); });
+  doc.setTextColor(0); k.y+=10;
+  k.footer(`Erstellt am ${new Date().toLocaleString("de-DE")} · ${S.email||""} · Kantine ${CFG.kurz||WEHR}`);
+  deliverPdf(doc, pdfName(`Jahresabschluss Kantine ${Y}.pdf`));
 }
 
 // ---------- Event wiring ----------
@@ -1242,13 +1571,18 @@ document.addEventListener("click", async ev => {
   const a=t.dataset.act, id=t.dataset.id;
   if (t.type==="checkbox" && a!=="shopdone") return;
   switch(a){
+    case "multi": UI.multi=!UI.multi; if (!UI.multi) UI.msel=[]; render(); break;
+    case "mtoggle": { const i=UI.msel.indexOf(id); if (i>=0) UI.msel.splice(i,1); else UI.msel.push(id); render(); break; }
+    case "msall": UI.msel=membersActive().map(m=>m.id); render(); break;
+    case "msnone": UI.msel=[]; render(); break;
+    case "mgo": { const ids=membersActive().map(m=>m.id).filter(x=>UI.msel.includes(x)); if (!ids.length) return; UI.sel="x:"+ids.join(","); render(); window.scrollTo({top:0}); break; }
     case "pick": UI.sel=t.dataset.key; render(); window.scrollTo({top:0}); break;
-    case "unpick": case "alarm": UI.sel=null; render(); window.scrollTo({top:0}); if (a==="alarm") toast("Gemerkt. Die Buchung wartet oben unter „Angefangene Buchungen“."); break;
+    case "unpick": case "alarm": if (UI.sel && UI.sel.startsWith("x:") && a==="unpick"){ UI.msel=UI.sel.slice(2).split(","); UI.multi=true; } UI.sel=null; render(); window.scrollTo({top:0}); if (a==="alarm") toast("Gemerkt. Die Buchung wartet oben unter „Angefangene Buchungen“."); break;
     case "dropcart": setCart(t.dataset.key,{}); render(); break;
     case "add": { if (ev.target.closest(".minus")) return; const c={...cartOf(UI.sel)}; c[id]=(c[id]||0)+1; setCart(UI.sel,c); render(); break; }
     case "sub": { ev.stopPropagation(); const c={...cartOf(UI.sel)}; c[id]=Math.max(0,(c[id]||0)-1); if(!c[id]) delete c[id]; setCart(UI.sel,c); render(); break; }
     case "clear": setCart(UI.sel,{}); render(); break;
-    case "book": t.disabled=true; await bookCart(); break;
+    case "book": t.disabled=true; await bookCart(); t.disabled=false; break;
     case "storno": { const b=S.bookings[id]; if(!b) return; confirmBox("Buchung stornieren", `${b.qty}× ${esc(b.n)} (${eur(b.price*b.qty)}) wieder austragen?`, "Stornieren", ()=>w(db=>db.doc("bookings/"+id).delete(),"Storniert"), true); break; }
     case "opnew": opForm(); break;
     case "opedit": opForm(id); break;
@@ -1290,6 +1624,11 @@ document.addEventListener("click", async ev => {
     case "pedit": productForm(id); break;
     case "pay": paymentForm(id); break;
     case "qr": qrModal(id); break;
+    case "logf": UI.logFilter=t.dataset.f; render(); break;
+    case "logcsv": saveFile(`Kantine-Protokoll-${today()}.csv`, csv(["Zeitpunkt","Gerät","Bereich","Änderung"], list("log").sort((a,b)=>(a.ts||0)-(b.ts||0)).map(x=>[new Date(x.ts).toLocaleString("de-DE"), x.dev||"", LOGCAT[x.cat]||"", x.text]))); break;
+    case "stmt": statementModal(id); break;
+    case "stmtall": statementModal(null); break;
+    case "yearpdf": t.disabled=true; await yearReportPdf(+($("#yrSel")?.value||new Date().getFullYear())); t.disabled=false; break;
     case "backup": {
       const out={app:"kantine", version:1, created:new Date().toISOString(), docs:[], codes:Object.entries(S.codes).map(([m,code])=>({member_id:m,code}))};
       for (const c of COLS) for (const [did,d] of Object.entries(S[c])) out.docs.push({col:c,id:did,data:d});
@@ -1329,7 +1668,7 @@ document.addEventListener("click", async ev => {
       const rows=membersActive().map(m=>[m.name, centsIn(balance(m.id)), lastActivity(m.id)?new Date(lastActivity(m.id)).toLocaleString("de-DE"):""]);
       saveFile(`Kantine-Konten-${today()}.csv`, csv(["Name","Kontostand EUR","Letzte Buchung"], rows)); break; }
     case "csvtx": {
-      const rows=[...list("bookings").map(b=>[new Date(b.ts).toLocaleString("de-DE"), b.o?`Wehr: ${S.ops[b.o]?.title||""}`:mName(b.m), b.o?"Einsatzverpflegung":b.r?"Runde":"Verzehr", `${b.qty}x ${b.n}`, centsIn(-(b.price*b.qty)), b.by||""]),
+      const rows=[...list("bookings").map(b=>[new Date(b.ts).toLocaleString("de-DE"), b.cash?"Gast":b.o?`Wehr: ${S.ops[b.o]?.title||""}`:mName(b.m), b.cash?"Barverkauf":b.o?"Einsatzverpflegung":b.r?"Runde":"Verzehr", `${b.qty}x ${b.n}`, centsIn(-(b.price*b.qty)), b.by||""]),
         ...list("payments").map(p=>[new Date(p.ts).toLocaleString("de-DE"),mName(p.m),"Einzahlung",p.note||"",centsIn(p.amount),""])];
       saveFile(`Kantine-Buchungen-${today()}.csv`, csv(["Zeitpunkt","Name","Art","Text","Betrag EUR","Gebucht von"], rows)); break; }
     case "close": runClose(); break;
@@ -1359,6 +1698,7 @@ document.addEventListener("change", e => {
 document.addEventListener("submit", async e => {
   e.preventDefault();
   if (e.target.id==="shopForm"){ const inp=$("#shopText"); const v=inp.value.trim(); if(!v) return; if (await w(db=>db.collection("shopping").doc().set({text:v.slice(0,80),done:false,ts:Date.now()}))) inp.value=""; }
+  if (e.target.id==="tokForm"){ const v=$("#tokExp").value; if (await w(db=>db.doc("settings/app").set({...S.settings, tokenExp:v}), "Gespeichert")) ls.set("kantine.tokenexp", null); return; }
   if (e.target.id==="setForm"){
     const unit=$("#setUnit").value.trim().slice(0,60), pin=$("#setPin").value.trim(), tpin=$("#setTPin").value.trim();
     if ((pin && !/^\d{4,6}$/.test(pin)) || (tpin && !/^\d{4,6}$/.test(tpin))){ toast("Eine PIN braucht 4 bis 6 Ziffern."); return; }
@@ -1424,6 +1764,7 @@ async function decState(text){ const f=JSON.parse(text); HDR={salt:f.salt, wrap:
 // --- GitHub API
 async function gh(path, opt={}){
   const r=await fetch(GH+path, {...opt, cache:"no-store", headers:{Accept:"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28", Authorization:"Bearer "+TOKEN, ...(opt.body?{"Content-Type":"application/json"}:{}), ...(opt.headers||{})}});
+  try{ const ex=r.headers.get("github-authentication-token-expiration"); if (ex){ const d=new Date(ex.replace(" UTC","Z").replace(" ","T")); if (!isNaN(d)) ls.set("kantine.tokenexp", isoLocal(d.getTime())); } }catch(e){}
   if (r.status===204) return null;
   const j=await r.json().catch(()=>null);
   if (!r.ok){ const e=new Error((j&&j.message)||r.statusText); e.status=r.status; throw e; }
@@ -1466,7 +1807,13 @@ async function loadCache(){
   try{ const o=JSON.parse(ls.get("kantine.cache")||"null"); if (!o) return false; const d=JSON.parse(tdec.decode(await gunz(await unseal(DEK,o))));
     REMOTE=d.remote||REMOTE; PENDING=d.pending||[]; if (o.hdr) HDR=o.hdr; return true; }catch(e){ return false; }
 }
-function pushOp(op){ PENDING.push({...op, ts:Date.now(), dev:DEV}); rebuild(); persist(); schedule(); updSync(); scheduleSync(); }
+function pushOp(op){
+  const before = op.col==="settings" ? clone(S.settings||{}) : ((S[op.col]||{})[op.id] ? clone(S[op.col][op.id]) : undefined);
+  PENDING.push({...op, ts:Date.now(), dev:DEV});
+  for (const l of logOps(op, before)) PENDING.push(l);
+  if (op.col!=="log" && !LOG_MUTE) pruneLog();
+  rebuild(); persist(); schedule(); updSync(); scheduleSync();
+}
 const api = {
   async set(col,id,data){ pushOp({t:"set",col,id,data:clone(data)}); },
   async patch(col,id,p){ const ok = col==="settings" || (S[col]||{})[id]; if (!ok) throw {code:"invalid_argument", message:"Eintrag nicht gefunden"}; pushOp({t:"patch",col,id,data:clone(p)}); },
@@ -1750,6 +2097,7 @@ function memberRender(){
 
 // ================= Start =================
 window.__kantine = { syncNow:()=>syncNow(), publish:()=>publishMembers(), pending:()=>PENDING.length };
+if ("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")) navigator.serviceWorker.register("sw.js").catch(()=>{});
 async function boot(){
   const m=location.hash.match(/^#k=([A-Za-z0-9_-]{24,})$/);
   const ok = OWNER && APPREPO && DATAREPO && !/DEIN/i.test(OWNER+APPREPO+DATAREPO) && window.crypto && crypto.subtle && window.CompressionStream;

@@ -91,6 +91,19 @@ Ist eine Team-PIN gesetzt, sperrt sich die App nach 10 Minuten ohne Bedienung; e
 
 ---
 
+## Im Alltag
+
+- **Mehrere auf einmal buchen:** Strichliste → **Mehrere buchen** → Namen antippen → **Artikel wählen** → **Für alle buchen**. Jede Person bekommt dieselben Artikel auf ihr Konto.
+- **Barverkauf (Gäste):** Kachel **Bar bezahlt** → Artikel wählen → **Bar kassieren**. Mit Rückgeld-Rechner; zählt im Bestand und landet als Einnahme „Barverkauf“ im Kassenbuch, kein Konto wird belastet.
+- **Kontoauszug als PDF:** Verwaltung → Konten → **Auszug** (eine Person) oder **Kontoauszüge (PDF)** (alle, je Person eine Seite). Zeitraum wählen → PDF teilen, herunterladen oder drucken.
+- **Jahresabschluss:** Verwaltung → Abschluss & Einstellungen → **Jahresabschluss als PDF** – Kasse, Umsatz, Abzugslisten, Einsatzverpflegung, offene Beträge, Warenbestand und Unterschriftszeilen für die Kassenprüfung. Am besten vor dem letzten Abschluss des Jahres erstellen.
+- **Quartals-Erinnerung:** In den letzten 7 Tagen eines Quartals erinnert die Verwaltung an Abzugsliste und Sicherung.
+- **Protokoll:** Verwaltung → Protokoll zeigt, wer wann an welchem Gerät Preise, Mitglieder, Zahlungen, Kassenbuch oder Einstellungen geändert und was storniert hat. Exportierbar als CSV.
+- **Ohne Internet:** Einmal mit Internet geöffnet, startet die App danach auch offline. Buchungen werden nachgeschickt, sobald wieder Verbindung besteht.
+- **Ablauf des Zugangsschlüssels:** Unter Abschluss & Einstellungen → Gerät & Sicherheit das Datum „gültig bis“ eintragen (steht bei GitHub beim Schlüssel). 30 Tage vorher erscheint ein Hinweis.
+
+---
+
 ## Gerät verloren oder Person scheidet aus
 
 1. GitHub → Developer settings → Fine-grained tokens → den alten Schlüssel **löschen** und einen neuen erzeugen (Schritt 3).

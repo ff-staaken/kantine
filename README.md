@@ -12,4 +12,4 @@ Termine und Statistik. Admin- und Team-PIN; Kameraden sehen ihr eigenes Konto ü
 
 In diesem Repository liegen keine lesbaren personenbezogenen Daten.
 
-Mitgelieferte Bibliotheken: qrcode-generator (MIT), Schriften Barlow / Barlow Condensed (SIL OFL).
+Mitgelieferte Bibliotheken: qrcode-generator (MIT), jsPDF (MIT), Schriften Barlow / Barlow Condensed (SIL OFL).
