@@ -62,6 +62,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .brand{display:grid;grid-template-columns:1fr auto 1fr;grid-template-areas:"l z r";align-items:center;gap:8px 16px;padding-block:8px}
 .b-left{grid-area:l;display:flex;align-items:center;gap:10px;min-width:0}
 .helpbtn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--muted);background:transparent;color:var(--muted);font:700 .85rem var(--f-body);cursor:pointer;vertical-align:middle;margin-left:6px;padding:0}
+.helpbox{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0;font-size:.92rem}
 .helpbtn:hover{border-color:var(--red);color:var(--red)}
 .linkbtn{background:none;border:0;padding:0;font:inherit;font-weight:700;color:inherit;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .linkbtn:hover{text-decoration-color:var(--red)}
@@ -1000,7 +1001,7 @@ function cashModal(total){
 
 function opForm(id){
   const o = id? S.ops[id] : {kind:"Einsatz", title:"", date:today()};
-  modal(`<h3>${id?"Einsatz bearbeiten":"Einsatz oder Übung verpflegen"}</h3>
+  modal(`<h3>${id?"Einsatz bearbeiten":"Einsatz oder Übung verpflegen"} ${mhelp("op")}</h3>
     <p class="muted" style="margin:0">${id?"":"Alles, was danach gebucht wird, geht auf das gewählte Kassenkonto."}</p>
     <div class="grid2"><label class="f">Art<select id="oKind">${OPKINDS.map(k=>`<option ${k===o.kind?"selected":""}>${k}</option>`).join("")}</select></label>
     <label class="f">Datum<input type="date" id="oDate" value="${esc(o.date)}"></label></div>
@@ -1227,7 +1228,7 @@ const pausedTag = p => p.active===false ? ` <span class="pill neutral">pausiert<
 function stockForm(mode){
   const ps = trackedAll();
   const inv = mode==="inv";
-  modal(`<h3>${inv?"Inventur":"Einkauf einbuchen"}</h3><p class="muted" style="margin:0">${inv?"Gezählten Bestand eintragen. Leere Felder bleiben unverändert.":"Gekaufte Menge je Artikel eintragen. Bei Kastenware Kästen und/oder einzelne Flaschen."}</p>
+  modal(`<h3>${inv?"Inventur":"Einkauf einbuchen"} ${mhelp(inv?"inventur":"einkauf")}</h3><p class="muted" style="margin:0">${inv?"Gezählten Bestand eintragen. Leere Felder bleiben unverändert.":"Gekaufte Menge je Artikel eintragen. Bei Kastenware Kästen und/oder einzelne Flaschen."}</p>
     <div>${ps.map(p=>`<div class="mrow"><span><b>${esc(p.name)}</b>${pausedTag(p)}<br><span class="muted small">jetzt ${stockShow(p)}</span></span>
       ${p.crate>1?`<input type="number" min="0" step="1" data-pid="${p.id}" data-k="crate" placeholder="Kästen" aria-label="${esc(p.name)} Kästen">`:`<span></span>`}
       <input type="number" min="0" step="1" data-pid="${p.id}" data-k="pcs" placeholder="${inv?"Stück":"+ Stück"}" aria-label="${esc(p.name)} Stück">
@@ -1266,7 +1267,7 @@ function stockForm(mode){
 function leergutForm(){
   const ps = productsActive().filter(p=>p.pfand>0);
   const val = (p,n) => n*p.pfand + (p.crate>1?Math.floor(n/p.crate)*(p.crateP||0):0);
-  modal(`<h3>Leergut zurückgegeben</h3><p class="muted" style="margin:0">Vorausgefüllt mit dem berechneten Leergut.</p>
+  modal(`<h3>Leergut zurückgegeben ${mhelp("leergut")}</h3><p class="muted" style="margin:0">Vorausgefüllt mit dem berechneten Leergut.</p>
     <div>${ps.map(p=>`<div class="mrow" style="grid-template-columns:1fr auto"><span><b>${esc(p.name)}</b><br><span class="muted small">da: ${units(empties(p.id),p.crate)}</span></span><input type="number" min="0" step="1" data-pid="${p.id}" value="${empties(p.id)}" aria-label="${esc(p.name)} Flaschen zurück"></div>`).join("")}</div>
     <div class="row between"><b>Pfand gesamt</b><b class="num" id="lgSum"></b></div>
     ${can("money")?`<label class="row" style="font-weight:600"><input type="checkbox" id="lgCash" checked> Pfandgeld als Einnahme ins Kassenbuch</label>`:""}
@@ -1750,7 +1751,7 @@ function splitShares(total, n){ const base=Math.floor(total/n), r=total-base*n; 
 function splitForm(opt){
   opt=opt||{}; const pre=opt.weights||{};
   const ms=membersActive(); const sel=new Map(Object.entries(pre).filter(([m])=>S.members[m]).map(([m,w])=>[m, Math.max(1,w|0)]));
-  modal(`<h3>${opt.eventId?"Kosten aufteilen":"Essen aufteilen"}</h3>
+  modal(`<h3>${opt.eventId?"Kosten aufteilen":"Essen aufteilen"} ${mhelp("split")}</h3>
     <p class="muted" style="margin:0">${opt.eventId?"Die Angemeldeten sind schon ausgewählt, mit Begleitung zahlt man entsprechend mehr.":"Teilnehmer anklicken, jeder bekommt seinen Anteil aufs Konto."}</p>
     <div class="grid2"><label class="f">Was gab es?<input type="text" id="spText" maxlength="60" placeholder="z. B. Pizza Übungsdienst" value="${esc(opt.text||"")}"></label>
       <label class="f">Gesamtbetrag in €<input type="text" id="spTotal" inputmode="decimal" placeholder="46,50"></label></div>
@@ -1807,7 +1808,7 @@ function splitForm(opt){
 const DENOMS=[[20000,"200 €"],[10000,"100 €"],[5000,"50 €"],[2000,"20 €"],[1000,"10 €"],[500,"5 €"],[200,"2 €"],[100,"1 €"],[50,"50 ct"],[20,"20 ct"],[10,"10 ct"],[5,"5 ct"],[2,"2 ct"],[1,"1 ct"]];
 function kassensturzForm(){
   const soll=cashBalance();
-  modal(`<h3>Kassensturz</h3>
+  modal(`<h3>Kassensturz ${mhelp("kassensturz")}</h3>
     <p class="muted" style="margin:0">Bargeld zählen. Laut Kassenbuch sollten <b class="num">${eur(soll)}</b> in der Kasse sein.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
       ${DENOMS.map(([c,l])=>`<label class="row" style="gap:8px;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:6px 10px"><span style="font-weight:600;min-width:46px">${l}</span><input type="number" min="0" step="1" data-den="${c}" placeholder="0" style="width:80px;min-height:36px" aria-label="Anzahl ${l}"></label>`).join("")}
@@ -1849,7 +1850,14 @@ function kassensturzList(){
 const HELP = {
   kiosk: ["Strichliste", "Namen antippen, Artikel antippen, buchen. „Mehrere buchen“ gibt mehreren Kameraden dasselbe. Über die Kacheln oben bucht ihr Barverkauf an Gäste, Einsätze und Übungen (auf FF/JF Kasse) oder eine Runde. „Essen aufteilen“ verteilt einen Gesamtbetrag auf die Teilnehmer. Stornieren geht bis 15 Minuten nach der Buchung."],
   termine: ["Termine", "Grillabend, Übungsessen, Kameradschaftsabend. Anmelden kann das Kantinenteam für jeden Kameraden. Nach dem Termin: feste Preise mit „Kosten auf Konten buchen“, eingekauftes oder bestelltes Essen mit „Kosten aufteilen“ – dann zahlt jeder angemeldete Kamerad seinen Anteil, mit Begleitung entsprechend mehr."],
-  lager: ["Lager", "Bestand wird bei jeder Buchung abgezogen. „Einkauf einbuchen“ erhöht ihn, „Inventur“ setzt ihn auf den gezählten Stand. Unter dem Mindestbestand landet ein Artikel automatisch auf der Einkaufsliste – mit einer Menge, die zum Verbrauch der letzten Wochen passt."],
+  lager: ["Lager", "Jede Buchung zieht automatisch vom Bestand ab. Nach dem Einkauf „Einkauf einbuchen“, zum Nachzählen „Inventur“. Was ohne Bezahlung rausgeht – Getränke für den Dienstabend, Bruch, Abgelaufenes – über „Ausbuchen“. Fällt etwas unter den Mindestbestand, steht es auf der Einkaufsliste, mit einer Menge passend zum Verbrauch der letzten Wochen."],
+  ausbuchen: ["Ausbuchen", "Für alles, was rausgeht, ohne dass jemand zahlt: Getränke für den Dienstabend, ein Kasten mit Bruch, Abgelaufenes. Grund wählen, Menge eintragen, ausbuchen. Der Bestand stimmt dann wieder, niemand wird belastet, und im Protokoll steht, wer es war. Soll doch jemand zahlen, bucht ihr ganz normal an der Strichliste."],
+  einkauf: ["Einkauf einbuchen", "Nach dem Einkauf eintragen, was neu ins Lager kommt – Kästen oder einzelne Flaschen. Das Haltbarkeitsdatum kannst du gleich mit anpassen. Kam das Geld aus der Kantinenkasse, trägt der Kantinenchef unten den Betrag vom Kassenbon ein und fotografiert den Bon – dann steht der Einkauf auch im Kassenbuch."],
+  inventur: ["Inventur", "Einmal durchzählen und eintragen, was wirklich da ist. Die App nimmt die Zahl als neuen Bestand. Felder, die du leer lässt, bleiben, wie sie sind. Weicht es stark ab, lohnt ein Blick ins Protokoll."],
+  leergut: ["Leergut", "Wenn Leergut zum Getränkemarkt ging: Die App schlägt vor, wie viel eigentlich da sein müsste. Trag ein, was tatsächlich zurückging. Mit dem Häkchen landet das Pfandgeld als Einnahme im Kassenbuch."],
+  kassensturz: ["Kassensturz", "Das Geld in der Kasse zählen – nach Scheinen und Münzen oder gleich als Gesamtbetrag. Die App vergleicht mit dem Kassenbuch. Gibt es eine Differenz, kannst du sie direkt als Korrektur buchen. Am besten zu zweit zählen und das in der Bemerkung festhalten."],
+  split: ["Essen aufteilen", "Für Essen, das bestellt oder gekocht wurde: Gesamtbetrag eintragen, wer mitgegessen hat, anhaken. Jeder zahlt seinen Anteil – wer jemanden mitbringt, bekommt bei „Personen“ eine höhere Zahl. Kam das Geld aus der Kantinenkasse, Häkchen setzen, dann steht die Ausgabe auch im Kassenbuch."],
+  op: ["Einsatz / Übung", "Für Verpflegung bei Einsatz oder Übung: Stichwort eintragen und wählen, ob FF Kasse oder JF Kasse zahlt. Alles, was ihr dort danach bucht, geht auf dieses Konto. Ist der Einsatz vorbei, auf „Verpflegung beenden“ tippen."],
   statistik: ["Statistik", "Verbrauch pro Monat (antippen für Details) und der Jahresrückblick für die Jahreshauptversammlung. Bewusst ohne Ranglisten pro Person."],
   start: ["Übersicht", "Hier steht, was gerade ansteht – mit Knopf direkt zur Erledigung. Ist alles erledigt, ist die Liste leer."],
   konten: ["Konten", "Kontostand jedes Mitglieds. Namen antippen für alle Buchungen, Storno, Einzahlung, Kontoauszug und QR-Code."],
@@ -1861,6 +1869,7 @@ const HELP = {
   benutzer: ["Benutzer", "Wer die App bedienen darf und mit welcher Rolle. Jeder meldet sich mit Namen und eigenem Passwort an."],
   abschluss: ["Abschluss & Einstellungen", "Abschluss fasst die Einzelbuchungen zusammen (einmal im Quartal). Dazu Jahresabschluss als PDF, Datensicherung und – für Admins – Einstellungen und Geräte."]
 };
+const mhelp = k => HELP[k] ? `<button class="helpbtn" type="button" data-act="mhelp" data-k="${k}" aria-label="Hilfe: ${esc(HELP[k][0])}" aria-expanded="false">?</button>` : "";
 const help = k => HELP[k] ? `<button class="helpbtn" type="button" data-act="help" data-k="${k}" aria-label="Hilfe: ${esc(HELP[k][0])}">?</button>` : "";
 function showHelp(k){ const h=HELP[k]; if (!h) return; modal(`<h3>${esc(h[0])}</h3><p style="margin:0">${esc(h[1])}</p><div class="actions"><button class="btn primary" data-close>Verstanden</button></div>`); }
 
@@ -1942,7 +1951,7 @@ function dailyRate(pid){
 const OUT_REASONS=["Herausgabe ohne Berechnung","Bruch / beschädigt","Abgelaufen","Eigenverbrauch Kantine","Sonstiges"];
 function outForm(){
   const ps=trackedAll();
-  modal(`<h3>Ausbuchen</h3>
+  modal(`<h3>Ausbuchen ${mhelp("ausbuchen")}</h3>
     <p class="muted" style="margin:0">Menge eintragen, die ohne Berechnung aus dem Bestand geht. Niemand wird belastet.</p>
     <label class="f">Grund<select id="outReason">${OUT_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></label>
     <div>${ps.map(p=>`<div class="mrow" style="grid-template-columns:1fr auto auto"><span><b>${esc(p.name)}</b>${pausedTag(p)}<br><span class="muted small">jetzt ${stockShow(p)}</span></span>
@@ -2003,6 +2012,7 @@ document.addEventListener("click", async ev => {
     case "splitnew": splitForm(); break;
     case "evsplit": { const e=S.events[id]; if (!e) break; const wts={}; list("signups").filter(x=>x.e===id && S.members[x.m]).forEach(x=>{ wts[x.m]=x.count||1; }); splitForm({text:e.title, weights:wts, eventId:id}); break; }
     case "help": showHelp(t.dataset.k); break;
+    case "mhelp": { const h=t.closest("h3"); const nx=h && h.nextElementSibling; if (nx && nx.classList.contains("helpbox")){ nx.remove(); t.setAttribute("aria-expanded","false"); } else if (h && HELP[t.dataset.k]){ const p=document.createElement("p"); p.className="helpbox"; p.textContent=HELP[t.dataset.k][1]; h.after(p); t.setAttribute("aria-expanded","true"); } break; }
     case "az": { const el=document.querySelector(`.mgrid .tile[data-az="${t.dataset.l}"]`); if (el){ el.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth", block:"start"}); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); } break; }
     case "mdetail": memberDetail(id); break;
     case "roundend": { const r=S.rounds[id]; confirmBox("Runde beenden", `Die Runde von <b>${esc(mName(r.payer))}</b> kostet <b>${eur(roundTotal(id))}</b>. Alles ist bereits auf ihr Konto gebucht. Runde jetzt schließen?`.replace("ihr Konto","das Konto"), "Runde beenden", async()=>{ if (await w(db=>db.doc("rounds/"+id).update({open:false}),"Runde beendet – danke fürs Ausgeben!")){ setCart("r:"+id,{}); UI.sel=null; render(); } }); break; }
