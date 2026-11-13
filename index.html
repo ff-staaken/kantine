@@ -946,9 +946,9 @@ function aClose(){
       ${S.settings.lastBackup?`<p class="muted small" style="margin:0">Letzte Sicherung: ${tsStr(S.settings.lastBackup)}</p>`:`<p class="muted small" style="margin:0">Noch keine Sicherung heruntergeladen.</p>`}</div></section>
     ${can("system")?`<section class="section"><h3>Einstellungen</h3>
       <form class="panel grid2" id="setForm"><label class="f">Name der Wehr<input type="text" id="setUnit" value="${esc(S.settings.unit||"")}" placeholder="z. B. FF Musterdorf"></label>
-      <label class="f">Admin-PIN<input type="password" id="setPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.pinHash?"Gesetzt – neue eingeben zum Ändern":"4 bis 6 Ziffern"}"><span class="hint">Sperrt die Verwaltung am gemeinsamen Tablet.</span></label>
-      <label class="f">Team-PIN<input type="password" id="setTPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.teamPinHash?"Gesetzt – neue eingeben zum Ändern":"optional, 4 bis 6 Ziffern"}"><span class="hint">Für Kantinenteam und HBM. Sperrt die App nach 10 Minuten ohne Bedienung.</span></label>
-      <div class="row" style="align-self:end"><button class="btn primary" type="submit">Speichern</button>${S.settings.pinHash?`<button class="btn" type="button" data-act="pinrm">Admin-PIN entfernen</button>`:""}${S.settings.teamPinHash?`<button class="btn" type="button" data-act="tpinrm">Team-PIN entfernen</button>`:""}</div></form></section>
+      ${usersOn()?"":`<label class="f">Admin-PIN<input type="password" id="setPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.pinHash?"Gesetzt – neue eingeben zum Ändern":"4 bis 6 Ziffern"}"><span class="hint">Sperrt die Verwaltung am gemeinsamen Tablet.</span></label>
+      <label class="f">Team-PIN<input type="password" id="setTPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.teamPinHash?"Gesetzt – neue eingeben zum Ändern":"optional, 4 bis 6 Ziffern"}"><span class="hint">Für Kantinenteam und HBM. Sperrt die App nach 10 Minuten ohne Bedienung.</span></label>`}
+      <div class="row" style="align-self:end"><button class="btn primary" type="submit">Speichern</button>${S.settings.pinHash&&!usersOn()?`<button class="btn" type="button" data-act="pinrm">Admin-PIN entfernen</button>`:""}${S.settings.teamPinHash&&!usersOn()?`<button class="btn" type="button" data-act="tpinrm">Team-PIN entfernen</button>`:""}</div></form></section>
     <section class="section"><h3>Geräte &amp; Sicherheit</h3>
       <div class="panel stack"><div class="row between"><span>Dieses Gerät: <b>${esc(S.email||"")}</b></span><span class="muted small">${esc(syncLabel())}</span></div>
       <form class="row" id="tokForm"><label class="f" style="width:200px">Zugangsschlüssel gültig bis<input type="date" id="tokExp" value="${esc(tokenExpiry())}"></label><button class="btn" type="submit" style="align-self:flex-end">Speichern</button><span class="hint" style="align-self:flex-end">Steht bei GitHub beim Schlüssel. 30 Tage vorher erscheint ein Hinweis.</span></form>
@@ -2095,12 +2095,12 @@ document.addEventListener("submit", async e => {
   }
   if (e.target.id==="tokForm"){ const v=$("#tokExp").value; if (await w(db=>db.doc("settings/app").set({...S.settings, tokenExp:v}), "Gespeichert")) ls.set("kantine.tokenexp", null); return; }
   if (e.target.id==="setForm"){
-    const unit=$("#setUnit").value.trim().slice(0,60), pin=$("#setPin").value.trim(), tpin=$("#setTPin").value.trim();
+    const unit=$("#setUnit").value.trim().slice(0,60), pin=($("#setPin")?.value||"").trim(), tpin=($("#setTPin")?.value||"").trim();
     if ((pin && !/^\d{4,6}$/.test(pin)) || (tpin && !/^\d{4,6}$/.test(tpin))){ toast("Eine PIN braucht 4 bis 6 Ziffern."); return; }
     if (tpin && pin && tpin===pin){ toast("Team-PIN und Admin-PIN müssen verschieden sein."); return; }
     const data={...S.settings, unit}; if (pin) data.pinHash=await sha(pin); if (tpin) data.teamPinHash=await sha(tpin);
-    $("#setTPin").value="";
-    if (await w(db=>db.doc("settings/app").set(data), pin?"Gespeichert – PIN ist aktiv":"Gespeichert")){ $("#setPin").value=""; if(pin){ UI.unlocked=true; UI.unlockAt=Date.now(); } }
+    if ($("#setTPin")) $("#setTPin").value="";
+    if (await w(db=>db.doc("settings/app").set(data), pin?"Gespeichert – PIN ist aktiv":"Gespeichert")){ if ($("#setPin")) $("#setPin").value=""; if(pin){ UI.unlocked=true; UI.unlockAt=Date.now(); } }
   }
 });
 document.addEventListener("pointerdown", ()=>{ UI.lastAct=Date.now(); if (UI.unlocked) UI.unlockAt=Date.now(); }, {passive:true});
