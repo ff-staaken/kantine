@@ -1,0 +1,25 @@
+@font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(fonts/barlow-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:600;font-display:swap;src:url(fonts/barlow-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:700;font-display:swap;src:url(fonts/barlow-condensed-latin-700-normal.woff2) format("woff2")}
+:root{--bg:#eceef1;--surface:#fff;--ink:#15191e;--muted:#5b6570;--line:#d6dbe1;--red:#d2161e;--navy:#1b2756;--navy-ink:#fff;--navy-muted:#c3cbe6;--flame:#f7b21b;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#111417;--surface:#1a1e23;--ink:#edf0f3;--muted:#9aa4af;--line:#2e353d;--red:#e6363d;--navy:#111836;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:var(--navy);color:var(--navy-ink)}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:760px;margin:0 auto}
+.bar{display:flex;align-items:center;gap:12px;padding-block:12px}
+.bar img{height:44px;width:auto}
+.bar b{font:700 1.4rem "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.02em}
+.bar small{display:block;color:var(--flame);font-weight:600;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase}
+.bar a{margin-left:auto;color:var(--navy-ink);font-weight:600;text-decoration:none;border:1px solid var(--navy-muted);border-radius:999px;padding:6px 14px}
+main{padding-block:24px 48px}
+article{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px 22px}
+h1{font:700 1.9rem "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.02em;margin:0 0 12px}
+h2{font:700 1.2rem "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.03em;margin:22px 0 6px}
+p,ul{margin:0 0 10px}
+ul{padding-left:20px}
+a{color:var(--red)}
+.muted{color:var(--muted);font-size:.9rem}
+address{font-style:normal}

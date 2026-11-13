@@ -254,6 +254,11 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
 .pindots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted)}
 .pindots i.f{background:var(--ink);border-color:var(--ink)}
 /* Login, Kameraden-Ansicht, QR & Druck */
+footer.legal{padding-block:0 28px;margin-top:-90px;font-size:.85rem}
+footer.legal .wrap{display:flex;gap:10px;justify-content:center;color:var(--muted)}
+footer.legal a{color:var(--muted);text-decoration:none}
+footer.legal a:hover{color:var(--red);text-decoration:underline}
+@media print{footer.legal{display:none}}
 .login{max-width:400px;margin:24px auto 0;display:flex;flex-direction:column;gap:14px}
 .qrbox{background:#fff;padding:10px;border-radius:10px;align-self:center;width:220px;max-width:100%}
 .qrbox svg{display:block;width:100%;height:auto}
@@ -302,6 +307,7 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--
   </nav></div></div>
 </header>
 <main class="gut"><div class="wrap" id="main"><div class="empty"><b>Kantine wird geladen …</b><span>Mitglieder, Artikel und Buchungen kommen gleich.</span></div></div></main>
+<footer class="gut legal"><div class="wrap"><a href="impressum.html">Impressum</a><span aria-hidden="true">·</span><a href="datenschutz.html">Datenschutz</a></div></footer>
 <div id="modalRoot"></div>
 <div id="toastRoot"></div>
 
