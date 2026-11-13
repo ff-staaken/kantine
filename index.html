@@ -1666,7 +1666,7 @@ function loginView(){
       <div class="row"><button class="btn" type="button" data-act="ulback">← Andere Person</button><button class="btn primary" type="submit" style="margin-left:auto">Anmelden</button></div></form>`; }
   return `<div class="stack"><div><h2>Wer bedient?</h2></div>
     <div class="mgrid">${us.map(u=>`<button class="tile" data-act="ulpick" data-id="${u.id}">${esc(u.name)}<span class="sub">${esc(ROLES[u.role]?.label||"")}</span></button>`).join("")}</div>
-    <p class="muted small" style="margin:0"><i>Gott zur Ehr, dem Nächsten zur Wehr!</i><br>Abmeldung nach 10 Minuten ohne Bedienung.</p></div>`;
+    <p class="muted small" style="margin:0">Abmeldung nach 10 Minuten ohne Bedienung.</p></div>`;
 }
 function whoBox(){
   const el=$("#whoBox"); if (!el) return;
