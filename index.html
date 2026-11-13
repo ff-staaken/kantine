@@ -243,7 +243,7 @@ td.r,th.r{text-align:right}
 .modal td input{min-height:36px;padding:6px 8px;width:110px}
 tfoot td{font-weight:700;background:var(--surface-2);border-top:1px solid var(--line)}
 .mrow{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
-.mrow input{width:84px}
+.mrow input{width:96px}
 .mrow input[type=date]{width:140px}
 @media (max-width:520px){.mrow{grid-template-columns:1fr 1fr}.mrow>span{grid-column:1/-1}.mrow input,.mrow input[type=date]{width:100%}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);border-radius:10px;padding:12px 14px 12px 16px;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px);width:max-content;box-shadow:0 10px 30px rgba(0,0,0,.25)}
@@ -317,7 +317,7 @@ footer.legal a:hover{color:var(--red);text-decoration:underline}
 (() => {
 "use strict";
 // ================= State =================
-const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users","splits","counts"];
+const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users","splits","counts","outs"];
 const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
 COLS.forEach(c => S[c] = {});
 const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
@@ -680,7 +680,7 @@ function vLager(){
   const pfandVal = pf.reduce((s,p)=>{ const e=empties(p.id); return s + e*p.pfand + (p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0); },0);
   return `<div class="stack">
     <div class="row between"><div><div class="eyebrow">Kühlschrank &amp; Lager</div><h2>Bestand ${help("lager")}</h2></div>
-      ${tracked.length?`<div class="row"><button class="btn" data-act="inventur">Inventur</button>${pf.length?`<button class="btn" data-act="leergut">Leergut zurückgegeben</button>`:""}<button class="btn primary" data-act="einkauf">Einkauf einbuchen</button></div>`:""}</div>
+      ${trackedAll().length?`<div class="row"><button class="btn" data-act="ausbuchen">Ausbuchen</button><button class="btn" data-act="inventur">Inventur</button>${pf.length?`<button class="btn" data-act="leergut">Leergut zurückgegeben</button>`:""}<button class="btn primary" data-act="einkauf">Einkauf einbuchen</button></div>`:""}</div>
     ${!ps.length?`<div class="empty"><b>Noch keine Artikel angelegt.</b><span>Sobald es ein Sortiment gibt, siehst du hier, was noch da ist und was nachgekauft werden muss.</span></div>`:`
     <div class="kpis"><div class="kpi"><span class="eyebrow">Nachkaufen</span><b class="num ${need.length?"neg":""}">${need.length}</b><span class="hint">Artikel unter Mindestbestand</span></div>
       <div class="kpi"><span class="eyebrow">MHD prüfen</span><b class="num ${mh.length?"neg":""}">${mh.length}</b><span class="hint">abgelaufen oder in 7 Tagen</span></div>
@@ -1222,11 +1222,13 @@ function billEvent(eid){
   });
 }
 
+const trackedAll = () => list("products").filter(p=>p.track!==false).sort((a,b)=>((a.active===false)-(b.active===false))||(CATS.indexOf(a.cat)-CATS.indexOf(b.cat))||byName(a,b));
+const pausedTag = p => p.active===false ? ` <span class="pill neutral">pausiert</span>` : "";
 function stockForm(mode){
-  const ps = productsActive().filter(p=>p.track!==false);
+  const ps = trackedAll();
   const inv = mode==="inv";
   modal(`<h3>${inv?"Inventur":"Einkauf einbuchen"}</h3><p class="muted" style="margin:0">${inv?"Gezählten Bestand eintragen. Leere Felder bleiben unverändert.":"Gekaufte Menge je Artikel eintragen. Bei Kastenware Kästen und/oder einzelne Flaschen."}</p>
-    <div>${ps.map(p=>`<div class="mrow"><span><b>${esc(p.name)}</b><br><span class="muted small">jetzt ${stockShow(p)}</span></span>
+    <div>${ps.map(p=>`<div class="mrow"><span><b>${esc(p.name)}</b>${pausedTag(p)}<br><span class="muted small">jetzt ${stockShow(p)}</span></span>
       ${p.crate>1?`<input type="number" min="0" step="1" data-pid="${p.id}" data-k="crate" placeholder="Kästen" aria-label="${esc(p.name)} Kästen">`:`<span></span>`}
       <input type="number" min="0" step="1" data-pid="${p.id}" data-k="pcs" placeholder="${inv?"Stück":"+ Stück"}" aria-label="${esc(p.name)} Stück">
       <input type="date" data-pid="${p.id}" data-k="mhd" value="${esc(p.mhd||"")}" aria-label="${esc(p.name)} MHD" title="Nächstes MHD"></div>`).join("")}</div>
@@ -1335,8 +1337,8 @@ function runClose(){
 
 // ================= Änderungsprotokoll =================
 let LOG_MUTE = 0;
-const LOGCOLS = {counts:1, splits:1, users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
-const LOGCAT = {counts:"Zahlungen & Kasse", splits:"Zahlungen & Kasse", users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
+const LOGCOLS = {outs:1, counts:1, splits:1, users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
+const LOGCAT = {outs:"Artikel & Preise", counts:"Zahlungen & Kasse", splits:"Zahlungen & Kasse", users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
 function fmtVal(k, v){
   if (v==null || v==="") return "–";
   if (["price","pfand","crateP","amount","cashStart"].includes(k)) return eur(v);
@@ -1372,6 +1374,7 @@ function describeOp(op, before){
       if (op.t==="del") return before ? `Kassenbuch-Eintrag gelöscht: ${before.text} (${eur(before.amount)})` : null;
       if (op.t==="set" && !before) return d.cat==="Barverkauf" ? null : `Kassenbuch: ${d.type==="out"?"Ausgabe":"Einnahme"} ${eur(d.amount)} – ${d.text}`;
       return diffText(`Kassenbuch-Eintrag ${before?before.text:""}`, before, d, {date:"Datum", type:"Art", amount:"Betrag", text:"Text", cat:"Kategorie"});
+    case "outs": return op.t==="set" && !before ? `Ausgebucht (${d.reason}): ${Object.values(d.items||{}).map(x=>`${x.q}× ${x.n}`).join(", ")}${d.note?` – ${d.note}`:""}` : null;
     case "counts": return op.t==="set" && !before ? `Kassensturz: gezählt ${eur(d.ist)}, laut Kassenbuch ${eur(d.soll)}, Differenz ${eurS(d.diff)}${d.booked?" (als Korrektur gebucht)":""}` : null;
     case "splits": return op.t==="set" && !before ? `Kosten aufgeteilt: ${d.text} ${eur(d.total)} auf ${(d.members||[]).length} Kameraden${d.cash?" (aus der Kantinenkasse bezahlt)":""}` : op.t==="del" && before ? `Aufteilung zurückgenommen: ${before.text}` : null;
     case "settlements": return op.t==="set" ? `Abzugsliste gebucht: ${d.label} (${eur(d.total||0)})` : null;
@@ -1928,9 +1931,38 @@ function memberDetail(mid){
 // ================= Bestellvorschlag =================
 function dailyRate(pid){
   const now=new Date(); const curYm=ymOf(now.getTime()); const prev=new Date(now.getFullYear(), now.getMonth()-1, 15); const prevYm=ymOf(prev.getTime());
-  const agg=monthAgg(); const q=ym=>((agg[ym]||{})[pid]||{}).q||0;
+  const agg=monthAgg(); const outQ=ym=>list("outs").filter(o=>ymOf(o.ts||0)===ym).reduce((a,o)=>a+(((o.items||{})[pid]||{}).q||0),0);
+  const q=ym=>(((agg[ym]||{})[pid]||{}).q||0)+outQ(ym);
   const days = now.getDate() + new Date(now.getFullYear(), now.getMonth(), 0).getDate();
   return (q(curYm)+q(prevYm))/days;
+}
+
+
+// ---------- Ausbuchen (Bestand ohne Berechnung verringern) ----------
+const OUT_REASONS=["Herausgabe ohne Berechnung","Bruch / beschädigt","Abgelaufen","Eigenverbrauch Kantine","Sonstiges"];
+function outForm(){
+  const ps=trackedAll();
+  modal(`<h3>Ausbuchen</h3>
+    <p class="muted" style="margin:0">Menge eintragen, die ohne Berechnung aus dem Bestand geht. Niemand wird belastet.</p>
+    <label class="f">Grund<select id="outReason">${OUT_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></label>
+    <div>${ps.map(p=>`<div class="mrow" style="grid-template-columns:1fr auto auto"><span><b>${esc(p.name)}</b>${pausedTag(p)}<br><span class="muted small">jetzt ${stockShow(p)}</span></span>
+      ${p.crate>1?`<input type="number" min="0" step="1" data-oid="${p.id}" data-k="crate" placeholder="Kästen" aria-label="${esc(p.name)} Kästen">`:`<span></span>`}
+      <input type="number" min="0" step="1" data-oid="${p.id}" data-k="pcs" placeholder="Stück" aria-label="${esc(p.name)} Stück"></div>`).join("")}</div>
+    <label class="f">Bemerkung (optional)<input type="text" id="outNote" maxlength="80" placeholder="z. B. Dienstsport, Jugendfeuerwehr"></label>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="outOk">Ausbuchen</button></div>`, r=>{
+    r.querySelector("#outOk").onclick=async()=>{
+      const by={}; r.querySelectorAll("input[data-oid]").forEach(i=>{ const o=(by[i.dataset.oid]=by[i.dataset.oid]||{}); o[i.dataset.k]=parseInt(i.value)||0; });
+      const items={}; for (const [pid,o] of Object.entries(by)){ const p=S.products[pid]; const n=(o.crate||0)*(p.crate||0)+(o.pcs||0); if (n>0) items[pid]={n:p.name, q:n}; }
+      if (!Object.keys(items).length){ toast("Bitte bei mindestens einem Artikel eine Menge eintragen."); return; }
+      const reason=r.querySelector("#outReason").value, note=r.querySelector("#outNote").value.trim().slice(0,80), now=Date.now();
+      const btn=r.querySelector("#outOk"); btn.disabled=true;
+      LOG_MUTE++;
+      let ok=false; try{ ok=await w(async db=>{ for (const [pid,x] of Object.entries(items)) await db.doc("products/"+pid).update({base:stock(pid)-x.q, baseAt:now}); }); } finally { LOG_MUTE--; }
+      if (!ok){ btn.disabled=false; return; }
+      await w(db=>db.collection("outs").doc().set({ts:now, date:today(), reason, note, items, by:who()}), `Ausgebucht: ${Object.values(items).map(x=>`${x.q}× ${x.n}`).join(", ")}`);
+      closeModal(); render();
+    };
+  });
 }
 
 // ---------- Event wiring ----------
@@ -1982,6 +2014,7 @@ document.addEventListener("click", async ev => {
     case "evbill": billEvent(id); break;
     case "einkauf": stockForm("buy"); break;
     case "inventur": stockForm("inv"); break;
+    case "ausbuchen": outForm(); break;
     case "leergut": leergutForm(); break;
     case "shopdone": { const it=S.shopping[id]; if(it) w(db=>db.doc("shopping/"+id).update({done:!it.done, by: !it.done && UI.meId ? mName(UI.meId) : ""})); break; }
     case "shopdel": w(db=>db.doc("shopping/"+id).delete()); break;
