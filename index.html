@@ -318,7 +318,7 @@ footer.legal a:hover{color:var(--red);text-decoration:underline}
 (() => {
 "use strict";
 // ================= State =================
-const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users","splits","counts","outs"];
+const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users","splits","counts","outs","invs"];
 const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
 COLS.forEach(c => S[c] = {});
 const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
@@ -672,24 +672,25 @@ function shoppingNeed(){
 }
 function vLager(){
   const ps = productsActive();
-  const tracked = ps.filter(p=>p.track!==false);
+  const paused = list("products").filter(p=>p.active===false && p.track!==false).sort(byName);
+  const tracked = trackedAll();
   const need = shoppingNeed();
-  const mh = ps.filter(p=>mhdState(p)==="exp"||mhdState(p)==="soon");
-  const pf = ps.filter(p=>p.pfand>0);
+  const mh = [...ps, ...paused].filter(p=>mhdState(p)==="exp"||mhdState(p)==="soon");
+  const pf = list("products").filter(p=>p.pfand>0).sort(byName);
   const shop = list("shopping").sort((a,b)=>(a.done?1:0)-(b.done?1:0) || a.ts-b.ts);
   const adm = adminOpen();
   const pfandVal = pf.reduce((s,p)=>{ const e=empties(p.id); return s + e*p.pfand + (p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0); },0);
   return `<div class="stack">
     <div class="row between"><div><div class="eyebrow">Kühlschrank &amp; Lager</div><h2>Bestand ${help("lager")}</h2></div>
       ${trackedAll().length?`<div class="row"><button class="btn" data-act="ausbuchen">Ausbuchen</button><button class="btn" data-act="inventur">Inventur</button>${pf.length?`<button class="btn" data-act="leergut">Leergut zurückgegeben</button>`:""}<button class="btn primary" data-act="einkauf">Einkauf einbuchen</button></div>`:""}</div>
-    ${!ps.length?`<div class="empty"><b>Noch keine Artikel angelegt.</b><span>Sobald es ein Sortiment gibt, siehst du hier, was noch da ist und was nachgekauft werden muss.</span></div>`:`
+    ${!ps.length&&!paused.length?`<div class="empty"><b>Noch keine Artikel angelegt.</b><span>Sobald es ein Sortiment gibt, siehst du hier, was noch da ist und was nachgekauft werden muss.</span></div>`:`
     <div class="kpis"><div class="kpi"><span class="eyebrow">Nachkaufen</span><b class="num ${need.length?"neg":""}">${need.length}</b><span class="hint">Artikel unter Mindestbestand</span></div>
       <div class="kpi"><span class="eyebrow">MHD prüfen</span><b class="num ${mh.length?"neg":""}">${mh.length}</b><span class="hint">abgelaufen oder in 7 Tagen</span></div>
       <div class="kpi"><span class="eyebrow">Leergut-Pfand</span><b class="num">${eur(pfandVal)}</b><span class="hint">liegt im Lager, geschätzt</span></div>
       <div class="kpi"><span class="eyebrow">Warenwert (VK)</span><b class="num">${eur(tracked.reduce((s,p)=>s+Math.max(0,stock(p.id))*p.price,0))}</b></div></div>
     ${mh.length?`<div class="panel section"><h3>Mindesthaltbarkeit</h3><ul class="list">${mh.sort((a,b)=>a.mhd.localeCompare(b.mhd)).map(p=>`<li><span class="pill ${mhdState(p)==="exp"?"bad":"warn"}">${mhdState(p)==="exp"?"Abgelaufen":"Bald"}</span><span class="grow"><b>${esc(p.name)}</b> <span class="muted">· ${mhdText(p)}</span></span>${p.track!==false?`<span class="muted num">${stock(p.id)} Stück</span>`:""}</li>`).join("")}</ul><p class="muted small" style="margin:0">Zuerst verbrauchen oder beim nächsten Termin anbieten. Das MHD wird beim Einkauf oder unter Stammdaten gepflegt.</p></div>`:""}
     <div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Bestand</th><th class="r">Mindestens</th><th>MHD</th><th>Status</th></tr></thead><tbody>
-      ${ps.map(p=>{const st=stockState(p),s=stock(p.id),m=mhdState(p);return `<tr><td><b>${esc(p.name)}</b><br><span class="muted small">${esc(p.cat||"")}</span></td><td class="r num">${st==="none"?"–":stockShow(p)}</td><td class="r num">${st==="none"?"–":(p.min||0)}</td><td class="num">${p.mhd?`<span class="${m==="exp"?"neg":m==="soon"?"":""}">${dDate(p.mhd)}</span>`:"–"}</td><td>${st==="none"?`<span class="pill neutral">Ohne Zählung</span>`:st==="out"?`<span class="pill bad">Leer</span>`:st==="low"?`<span class="pill warn">Nachkaufen</span>`:`<span class="pill ok">Ausreichend</span>`}</td></tr>`}).join("")}
+      ${[...ps, ...paused].map(p=>{const st=stockState(p),s=stock(p.id),m=mhdState(p);return `<tr${p.active===false?' style="opacity:.75"':""}><td><b>${esc(p.name)}</b>${pausedTag(p)}<br><span class="muted small">${esc(p.cat||"")}</span></td><td class="r num">${st==="none"?"–":stockShow(p)}</td><td class="r num">${st==="none"?"–":(p.min||0)}</td><td class="num">${p.mhd?`<span class="${m==="exp"?"neg":m==="soon"?"":""}">${dDate(p.mhd)}</span>`:"–"}</td><td>${st==="none"?`<span class="pill neutral">Ohne Zählung</span>`:st==="out"?`<span class="pill bad">Leer</span>`:st==="low"?`<span class="pill warn">Nachkaufen</span>`:`<span class="pill ok">Ausreichend</span>`}</td></tr>`}).join("")}
     </tbody></table></div>
     ${pf.length?`<div class="panel section"><div class="row between"><h3>Leergut &amp; Pfand</h3><span class="muted small">Aus verkauften Flaschen seit der letzten Rückgabe berechnet</span></div>
       <ul class="list">${pf.map(p=>{const e=empties(p.id); return `<li><span class="grow"><b>${esc(p.name)}</b> <span class="muted small">· ${centsIn(p.pfand)} € je Flasche${p.crate>1?`, ${p.crate} Fl. je Kasten${p.crateP?` + ${centsIn(p.crateP)} € Kastenpfand`:""}`:""}</span></span><span class="num">${units(e,p.crate)}</span><b class="num" style="min-width:80px;text-align:right">${eur(e*p.pfand+(p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0))}</b></li>`}).join("")}</ul></div>`:""}`}
@@ -927,7 +928,7 @@ function aStamm(){
       ${ms.length?`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Status</th><th></th></tr></thead><tbody>${ms.map(m=>`<tr><td><b>${esc(m.name)}</b></td><td>${m.active===false?`<span class="pill neutral">Ausgeblendet</span>`:`<span class="pill ok">Aktiv</span>`}</td><td class="r"><button class="btn small" data-act="qr" data-id="${m.id}">${S.codes[m.id]?"QR-Code":"QR-Code erzeugen"}</button> <button class="btn small" data-act="medit" data-id="${m.id}">Bearbeiten</button></td></tr>`).join("")}</tbody></table></div>`
       :`<div class="empty"><b>Noch keine Mitglieder.</b><span>Ein Name pro Zeile.</span></div>`}</section>
     <section class="section"><div class="row between"><h3>Sortiment &amp; Preise</h3><div class="row">${!ps.length?`<button class="btn" data-act="sample">Beispiel-Sortiment anlegen</button>`:""}<button class="btn primary" data-act="pnew">Artikel anlegen</button></div></div>
-      ${ps.length?`<div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Preis</th><th class="r">Füllmenge</th><th class="r">Pfand</th><th class="r">Bestand</th><th>Status</th><th></th></tr></thead><tbody>${ps.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="muted small">${esc(p.cat||"")}</span></td><td class="r num">${eur(p.price)}</td><td class="r num">${p.ml?`${nf.format(p.ml)} ml`:"–"}</td><td class="r num">${p.pfand?`${centsIn(p.pfand)} €${p.crate>1?` · ${p.crate}er`:""}`:"–"}</td><td class="r num">${p.track===false?"–":stockShow(p)}</td><td>${p.active===false?`<span class="pill neutral">Pausiert</span>`:`<span class="pill ok">Im Verkauf</span>`}</td><td class="r" style="white-space:nowrap"><button class="btn small" data-act="saison" data-id="${p.id}">${p.active===false?"Wieder anbieten":"Saison beendet"}</button> <button class="btn small" data-act="pedit" data-id="${p.id}">Bearbeiten</button></td></tr>`).join("")}</tbody></table></div>`
+      ${ps.length?`<div class="tbl-wrap"><table><thead><tr><th>Artikel</th><th class="r">Preis</th><th class="r">Füllmenge</th><th class="r">Pfand</th><th class="r">Bestand</th><th>Status</th><th></th></tr></thead><tbody>${ps.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="muted small">${esc(p.cat||"")}</span></td><td class="r num">${eur(p.price)}</td><td class="r num">${p.ml?`${nf.format(p.ml)} ml`:p.cat==="Getränke"?`<span class="pill warn" title="Für die Liter im Jahresrückblick">fehlt</span>`:"–"}</td><td class="r num">${p.pfand?`${centsIn(p.pfand)} €${p.crate>1?` · ${p.crate}er`:""}`:"–"}</td><td class="r num">${p.track===false?"–":stockShow(p)}</td><td>${p.active===false?`<span class="pill neutral">Pausiert</span>`:`<span class="pill ok">Im Verkauf</span>`}</td><td class="r" style="white-space:nowrap"><button class="btn small" data-act="saison" data-id="${p.id}">${p.active===false?"Wieder anbieten":"Saison beendet"}</button> <button class="btn small" data-act="pedit" data-id="${p.id}">Bearbeiten</button></td></tr>`).join("")}</tbody></table></div>`
       :`<div class="empty"><b>Noch kein Sortiment.</b><span>Einzeln anlegen oder mit dem Beispiel-Sortiment starten.</span></div>`}</section>`;
 }
 function aClose(){
@@ -1229,7 +1230,7 @@ function stockForm(mode){
   const ps = trackedAll();
   const inv = mode==="inv";
   modal(`<h3>${inv?"Inventur":"Einkauf einbuchen"} ${mhelp(inv?"inventur":"einkauf")}</h3><p class="muted" style="margin:0">${inv?"Gezählten Bestand eintragen. Leere Felder bleiben unverändert.":"Gekaufte Menge je Artikel eintragen. Bei Kastenware Kästen und/oder einzelne Flaschen."}</p>
-    <div>${ps.map(p=>`<div class="mrow"><span><b>${esc(p.name)}</b>${pausedTag(p)}<br><span class="muted small">jetzt ${stockShow(p)}</span></span>
+    <div>${ps.map(p=>`<div class="mrow"><span><b>${esc(p.name)}</b>${pausedTag(p)}<br><span class="muted small">jetzt ${stockShow(p)}</span>${inv?` <span class="small" data-diff="${p.id}"></span>`:""}</span>
       ${p.crate>1?`<input type="number" min="0" step="1" data-pid="${p.id}" data-k="crate" placeholder="Kästen" aria-label="${esc(p.name)} Kästen">`:`<span></span>`}
       <input type="number" min="0" step="1" data-pid="${p.id}" data-k="pcs" placeholder="${inv?"Stück":"+ Stück"}" aria-label="${esc(p.name)} Stück">
       <input type="date" data-pid="${p.id}" data-k="mhd" value="${esc(p.mhd||"")}" aria-label="${esc(p.name)} MHD" title="Nächstes MHD"></div>`).join("")}</div>
@@ -1237,6 +1238,12 @@ function stockForm(mode){
       <label class="f">Geschäft<input type="text" id="buyShop" maxlength="60" placeholder="z. B. Getränkemarkt"></label></div>
       ${S.assets?`<label class="f">Kassenbon fotografieren<input type="file" id="buyFile" accept="image/*,application/pdf" capture="environment"></label>`:""}`}
     <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="stSave">${inv?"Bestand übernehmen":"Einbuchen"}</button></div>`, r=>{
+    if (inv){ const upd=()=>{ const by={}; r.querySelectorAll("input[data-pid]").forEach(i=>{ if (i.dataset.k!=="mhd"){ const o=(by[i.dataset.pid]=by[i.dataset.pid]||{}); o[i.dataset.k]=i.value; } });
+        for (const [pid,o] of Object.entries(by)){ const el=r.querySelector(`[data-diff="${pid}"]`); if (!el) continue; const p=S.products[pid];
+          if ((o.crate||"")===""&&(o.pcs||"")===""){ el.textContent=""; continue; }
+          const n=(parseInt(o.crate)||0)*(p.crate||0)+(parseInt(o.pcs)||0); const d=n-stock(pid);
+          el.textContent = d===0 ? "· stimmt" : `· Abweichung ${d>0?"+":""}${d} (${eurS(d*(p.price||0))})`; el.className="small "+(d<0?"neg":d>0?"pos":"muted"); } };
+      r.querySelectorAll("input[data-pid]").forEach(i=>i.addEventListener("input", upd)); }
     r.querySelector("#stSave").onclick = async ()=>{
       const by={};
       r.querySelectorAll("input[data-pid]").forEach(i=>{ const o=(by[i.dataset.pid]=by[i.dataset.pid]||{}); o[i.dataset.k]=i.value; });
@@ -1256,16 +1263,21 @@ function stockForm(mode){
       let receipt="";
       const f = !inv && r.querySelector("#buyFile")?.files?.[0];
       if (f){ try{ receipt=await uploadReceipt(f); }catch(e){ toast("Kassenbon konnte nicht hochgeladen werden – Einkauf wird ohne Beleg gebucht."); } }
-      const ok = await w(async db=>{
+      const invItems={};
+      if (inv) for (const [pid,upd] of ch) if ("base" in upd){ const p=S.products[pid]; const soll=stock(pid); invItems[pid]={n:p.name, soll, ist:upd.base, diff:upd.base-soll, price:p.price||0}; }
+      const invTotal=Object.values(invItems).reduce((a,x)=>a+x.diff*x.price,0);
+      if (inv) LOG_MUTE++;
+      let ok; try{ ok = await w(async db=>{
         for (const [pid,upd] of ch) await db.doc("products/"+pid).update(upd);
         if (amt) await db.collection("cash").doc().set({date:today(), type:"out", amount:amt, text:`Einkauf${r.querySelector("#buyShop").value.trim()?` ${r.querySelector("#buyShop").value.trim()}`:""}`, cat:"Einkauf Kantine", receipt, ts:Date.now()});
-      }, inv?"Inventur übernommen":amt?"Einkauf eingebucht und im Kassenbuch erfasst":"Einkauf eingebucht");
+      }, inv?(Object.keys(invItems).length?`Inventur übernommen – Abweichung ${eurS(invTotal)}`:"Inventur übernommen"):amt?"Einkauf eingebucht und im Kassenbuch erfasst":"Einkauf eingebucht"); } finally { if (inv) LOG_MUTE--; }
+      if (ok && inv && Object.keys(invItems).length) await w(db=>db.collection("invs").doc().set({ts:Date.now(), date:today(), items:invItems, by:who()}));
       if (ok) closeModal(); else btn.disabled=false;
     };
   });
 }
 function leergutForm(){
-  const ps = productsActive().filter(p=>p.pfand>0);
+  const ps = list("products").filter(p=>p.pfand>0).sort((a,b)=>((a.active===false)-(b.active===false))||byName(a,b));
   const val = (p,n) => n*p.pfand + (p.crate>1?Math.floor(n/p.crate)*(p.crateP||0):0);
   modal(`<h3>Leergut zurückgegeben ${mhelp("leergut")}</h3><p class="muted" style="margin:0">Vorausgefüllt mit dem berechneten Leergut.</p>
     <div>${ps.map(p=>`<div class="mrow" style="grid-template-columns:1fr auto"><span><b>${esc(p.name)}</b><br><span class="muted small">da: ${units(empties(p.id),p.crate)}</span></span><input type="number" min="0" step="1" data-pid="${p.id}" value="${empties(p.id)}" aria-label="${esc(p.name)} Flaschen zurück"></div>`).join("")}</div>
@@ -1309,6 +1321,24 @@ async function saveFile(name, text, type){
 const csvCell = v => { v=String(v??""); return /[;"\n]/.test(v)? `"${v.replace(/"/g,'""')}"` : v; };
 const csv = (head, rows) => [head.join(";"), ...rows.map(r=>r.map(csvCell).join(";"))].join("\n");
 
+function closePrep(){
+  UI.prep=UI.prep||{};
+  const ids=membersActive().map(m=>m.id).filter(id=>{ const d=statementData(id, periodRange("all")); return d.rows.length || d.closing!==0; });
+  const row=(key,label,btn)=>`<li><span class="pill ${UI.prep[key]?"ok":"neutral"}">${UI.prep[key]?"✓ erledigt":"offen"}</span><span class="grow">${label}</span>${btn}</li>`;
+  modal(`<h3>Vor dem Abschluss</h3>
+    <p class="muted" style="margin:0">Nach dem Abschluss sind die Einzelbuchungen zusammengefasst. Sichere vorher, was du später noch im Detail brauchst.</p>
+    <ul class="list">
+      ${row("pdf",`Kontoauszüge für alle als PDF (${ids.length} Mitglieder)`,`<button class="btn small" id="cpPdf" ${ids.length?"":"disabled"}>Erstellen</button>`)}
+      ${row("csv","Alle Buchungen als Tabelle (CSV)",`<button class="btn small" id="cpCsv">Exportieren</button>`)}
+      ${row("backup","Sicherung herunterladen",`<button class="btn small" id="cpBak">Herunterladen</button>`)}
+    </ul>
+    <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn danger" id="cpGo">Weiter zum Abschluss</button></div>`, r=>{
+    r.querySelector("#cpPdf").onclick=async()=>{ UI.prep.pdf=true; await statementPdf(ids,"all"); };
+    r.querySelector("#cpCsv").onclick=()=>{ UI.prep.csv=true; document.querySelector('[data-act="csvtx"]')?.click(); setTimeout(closePrep,300); };
+    r.querySelector("#cpBak").onclick=()=>{ UI.prep.backup=true; document.querySelector('[data-act="backup"]')?.click(); setTimeout(closePrep,300); };
+    r.querySelector("#cpGo").onclick=()=>{ closeModal(); runClose(); };
+  });
+}
 function runClose(){
   const nB=Object.keys(S.bookings).length, nP=Object.keys(S.payments).length;
   confirmBox("Abschluss durchführen", `${nB} Buchungen und ${nP} Einzahlungen werden zusammengefasst und dann gelöscht. Kontostände, Bestände, Leergut, Einsatzverpflegung und Statistik bleiben gleich. Das lässt sich nicht rückgängig machen – vorher „Alle Buchungen exportieren“.`, "Abschluss durchführen", async()=>{
@@ -1332,14 +1362,15 @@ function runClose(){
       for (const b of bk) await db.doc("bookings/"+b.id).delete();
       for (const p of py) await db.doc("payments/"+p.id).delete();
     }, "Abschluss erledigt"); } finally { LOG_MUTE--; }
+    UI.prep={};
     addLog(`Abschluss durchgeführt: ${bk.length} Buchungen und ${py.length} Zahlungen zusammengefasst`, "system");
   }, true);
 }
 
 // ================= Änderungsprotokoll =================
 let LOG_MUTE = 0;
-const LOGCOLS = {outs:1, counts:1, splits:1, users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
-const LOGCAT = {outs:"Artikel & Preise", counts:"Zahlungen & Kasse", splits:"Zahlungen & Kasse", users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
+const LOGCOLS = {invs:1, outs:1, counts:1, splits:1, users:1, members:1, products:1, payments:1, cash:1, settings:1, codes:1, settlements:1, events:1, bookings:1};
+const LOGCAT = {invs:"Artikel & Preise", outs:"Artikel & Preise", counts:"Zahlungen & Kasse", splits:"Zahlungen & Kasse", users:"Sonstiges", members:"Mitglieder", products:"Artikel & Preise", payments:"Zahlungen & Kasse", cash:"Zahlungen & Kasse", settlements:"Zahlungen & Kasse", bookings:"Stornos", settings:"Sonstiges", codes:"Sonstiges", events:"Sonstiges", system:"Sonstiges"};
 function fmtVal(k, v){
   if (v==null || v==="") return "–";
   if (["price","pfand","crateP","amount","cashStart"].includes(k)) return eur(v);
@@ -1375,6 +1406,7 @@ function describeOp(op, before){
       if (op.t==="del") return before ? `Kassenbuch-Eintrag gelöscht: ${before.text} (${eur(before.amount)})` : null;
       if (op.t==="set" && !before) return d.cat==="Barverkauf" ? null : `Kassenbuch: ${d.type==="out"?"Ausgabe":"Einnahme"} ${eur(d.amount)} – ${d.text}`;
       return diffText(`Kassenbuch-Eintrag ${before?before.text:""}`, before, d, {date:"Datum", type:"Art", amount:"Betrag", text:"Text", cat:"Kategorie"});
+    case "invs": { if (op.t!=="set" || before) return null; const it=Object.values(d.items||{}); const dif=it.filter(x=>x.diff); return dif.length ? `Inventur (${it.length} Artikel gezählt): ${dif.map(x=>`${x.n} ${x.diff>0?"+":""}${x.diff} (${eurS(x.diff*(x.price||0))})`).join(", ")}` : `Inventur (${it.length} Artikel gezählt): keine Abweichung`; }
     case "outs": return op.t==="set" && !before ? `Ausgebucht (${d.reason}): ${Object.values(d.items||{}).map(x=>`${x.q}× ${x.n}`).join(", ")}${d.note?` – ${d.note}`:""}` : null;
     case "counts": return op.t==="set" && !before ? `Kassensturz: gezählt ${eur(d.ist)}, laut Kassenbuch ${eur(d.soll)}, Differenz ${eurS(d.diff)}${d.booked?" (als Korrektur gebucht)":""}` : null;
     case "splits": return op.t==="set" && !before ? `Kosten aufgeteilt: ${d.text} ${eur(d.total)} auf ${(d.members||[]).length} Kameraden${d.cash?" (aus der Kantinenkasse bezahlt)":""}` : op.t==="del" && before ? `Aufteilung zurückgenommen: ${before.text}` : null;
@@ -1626,14 +1658,38 @@ async function yearReportPdf(Y){
   if (neg.length) k.table([{h:"Mitglied",w:130},{h:"offen",w:45,align:"r"}], neg.map(x=>[x.n, eur(-x.b)]));
 
   // 6 Warenbestand
-  const ps=productsActive().filter(p=>p.track!==false);
+  const ps=trackedAll();
   k.h2(`6. Warenbestand (Stand ${dDate(now)})`);
-  if (ps.length){ let val=0; const rows=ps.map(p=>{ const s=Math.max(0,stock(p.id)); val+=s*p.price; return [p.name, units(s,p.crate), eur(p.price), eur(s*p.price)]; });
+  if (ps.length){ let val=0; const rows=ps.map(p=>{ const s=Math.max(0,stock(p.id)); val+=s*p.price; return [p.name+(p.active===false?" (pausiert)":""), units(s,p.crate), eur(p.price), eur(s*p.price)]; });
     const t=["Summe Verkaufswert","","",eur(val)]; t._bold=true; t._shade=true; rows.push(t);
     k.table([{h:"Artikel",w:80},{h:"Bestand",w:40},{h:"Preis",w:25,align:"r"},{h:"Wert",w:30,align:"r"}], rows);
-    const pf=productsActive().filter(p=>p.pfand>0).reduce((s,p)=>{ const e=empties(p.id); return s+e*p.pfand+(p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0); },0);
+    const pf=list("products").filter(p=>p.pfand>0).reduce((s,p)=>{ const e=empties(p.id); return s+e*p.pfand+(p.crate>1?Math.floor(e/p.crate)*(p.crateP||0):0); },0);
     if (pf) k.p(`Leergut im Lager (geschätzt): ${eur(pf)} Pfand.`, {muted:true}); }
   else k.p("Keine Artikel mit Bestandszählung.", {muted:true});
+
+  // 7 Ausbuchungen
+  const outs=list("outs").filter(o=>(o.date||"").slice(0,4)===String(Y));
+  k.h2(`7. Ausgebucht ohne Berechnung ${Y}`);
+  if (outs.length){ const byR={}; let tq=0, tv=0;
+    outs.forEach(o=>{ const r=(byR[o.reason]=byR[o.reason]||{q:0,v:0,n:0}); r.n++; Object.entries(o.items||{}).forEach(([pid,x])=>{ const pr=x.price!=null?x.price:(S.products[pid]?.price||0); r.q+=x.q; r.v+=x.q*pr; tq+=x.q; tv+=x.q*pr; }); });
+    const rows=Object.entries(byR).sort((a,b)=>b[1].v-a[1].v).map(([r,x])=>[r, `${x.n}×`, nf.format(x.q), eur(x.v)]); const t=["Summe","",nf.format(tq),eur(tv)]; t._bold=true; t._shade=true; rows.push(t);
+    k.table([{h:"Grund",w:80},{h:"Vorgänge",w:25,align:"r"},{h:"Stück",w:30,align:"r"},{h:"Warenwert (VK)",w:40,align:"r"}], rows);
+    const byP={}; outs.forEach(o=>Object.entries(o.items||{}).forEach(([pid,x])=>{ const e=(byP[x.n]=byP[x.n]||0); byP[x.n]=e+x.q; }));
+    k.p(`Artikel: ${Object.entries(byP).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`${q}× ${n}`).join(", ")}.`, {muted:true, size:8.5}); }
+  else k.p("Nichts ausgebucht.", {muted:true});
+
+  // 8 Inventurdifferenzen
+  const invs=list("invs").filter(o=>(o.date||"").slice(0,4)===String(Y));
+  k.h2(`8. Inventurdifferenzen ${Y}`);
+  if (invs.length){ const byP={};
+    invs.forEach(o=>Object.entries(o.items||{}).forEach(([pid,x])=>{ if (!x.diff) return; const e=(byP[pid]=byP[pid]||{n:x.n,d:0,v:0}); e.d+=x.diff; e.v+=x.diff*(x.price||0); }));
+    const arr=Object.values(byP).filter(x=>x.d).sort((a,b)=>a.v-b.v);
+    k.p(`${invs.length} ${invs.length===1?"Inventur":"Inventuren"}, zuletzt am ${dDate(invs.map(o=>o.date).sort().pop())}.`);
+    if (arr.length){ const rows=arr.map(x=>[x.n, (x.d>0?"+":"")+nf.format(x.d), eurS(x.v)]); const tv=arr.reduce((a,x)=>a+x.v,0); const t=["Summe","",eurS(tv)]; t._bold=true; t._shade=true; rows.push(t);
+      k.table([{h:"Artikel",w:110},{h:"Abweichung",w:30,align:"r"},{h:"Wert (VK)",w:35,align:"r"}], rows);
+      k.p("Minus = weniger gezählt als laut Bestand zu erwarten war.", {muted:true, size:8.5}); }
+    else k.p("Keine Abweichungen.", {muted:true}); }
+  else k.p("Keine Inventur erfasst.", {muted:true});
 
   // Unterschriften
   k.need(34); k.y+=14;
@@ -1897,6 +1953,7 @@ function todoItems(){
   }
   const need=shoppingNeed(); if (need.length) add("info", `${need.length} ${need.length===1?"Artikel":"Artikel"} nachkaufen: ${need.slice(0,4).map(x=>x.p.name).join(", ")}${need.length>4?" …":""}`, `<a class="btn small" href="#lager">Zum Lager</a>`);
   const neg=productsActive().filter(p=>p.track!==false && stock(p.id)<0); if (neg.length) add("warn", `Bestand prüfen: ${neg.map(p=>p.name).join(", ")}.`, b("inventur","Inventur"));
+  if (can("master")){ const noMl=list("products").filter(p=>p.cat==="Getränke" && !p.ml); if (noMl.length) add("info", `Füllmenge fehlt bei ${noMl.map(p=>p.name).join(", ")} (für die Liter im Jahresrückblick).`, b("atab","Zu den Stammdaten",'data-tab="stamm"')); }
   const mh=productsActive().filter(p=>mhdState(p)==="exp"||mhdState(p)==="soon"); if (mh.length) add("warn", `MHD prüfen: ${mh.map(p=>p.name).join(", ")}.`, `<a class="btn small" href="#lager">Zum Lager</a>`);
   if (can("system")){ const exp=tokenExpiry(); if (exp && daysUntil(exp)<=30) add("bad", `GitHub-Zugangsschlüssel läuft ${daysUntil(exp)<0?"ist abgelaufen":`in ${daysUntil(exp)} Tagen ab`}.`, b("atab","Einstellungen",'data-tab="abschluss"')); }
   if (syncErr && PENDING.length) add("bad", `${PENDING.length} Änderungen sind noch nicht abgeglichen (${syncErr}).`, b("syncnow","Jetzt abgleichen"));
@@ -1961,7 +2018,7 @@ function outForm(){
     <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="outOk">Ausbuchen</button></div>`, r=>{
     r.querySelector("#outOk").onclick=async()=>{
       const by={}; r.querySelectorAll("input[data-oid]").forEach(i=>{ const o=(by[i.dataset.oid]=by[i.dataset.oid]||{}); o[i.dataset.k]=parseInt(i.value)||0; });
-      const items={}; for (const [pid,o] of Object.entries(by)){ const p=S.products[pid]; const n=(o.crate||0)*(p.crate||0)+(o.pcs||0); if (n>0) items[pid]={n:p.name, q:n}; }
+      const items={}; for (const [pid,o] of Object.entries(by)){ const p=S.products[pid]; const n=(o.crate||0)*(p.crate||0)+(o.pcs||0); if (n>0) items[pid]={n:p.name, q:n, price:p.price||0}; }
       if (!Object.keys(items).length){ toast("Bitte bei mindestens einem Artikel eine Menge eintragen."); return; }
       const reason=r.querySelector("#outReason").value, note=r.querySelector("#outNote").value.trim().slice(0,80), now=Date.now();
       const btn=r.querySelector("#outOk"); btn.disabled=true;
@@ -2097,7 +2154,7 @@ document.addEventListener("click", async ev => {
       const rows=[...list("bookings").map(b=>[new Date(b.ts).toLocaleString("de-DE"), b.cash?"Gast":b.o?`${b.m?mName(b.m):"Wehr"}: ${S.ops[b.o]?.title||""}`:mName(b.m), b.cash?"Barverkauf":b.o?"Einsatzverpflegung":b.r?"Runde":"Verzehr", `${b.qty}x ${b.n}`, centsIn(-(b.price*b.qty)), b.by||"", b.dev||""]),
         ...list("payments").map(p=>[new Date(p.ts).toLocaleString("de-DE"),mName(p.m),"Einzahlung",p.note||"",centsIn(p.amount),"",""])];
       saveFile(`Kantine-Buchungen-${today()}.csv`, csv(["Zeitpunkt","Name","Art","Text","Betrag EUR","Gebucht von","Gerät"], rows)); break; }
-    case "close": runClose(); break;
+    case "close": closePrep(); break;
     case "lock": UI.unlocked=false; render(); break;
     case "pinrm": confirmBox("PIN entfernen","Dann kann am gemeinsamen Tablet jeder die Verwaltung öffnen.","PIN entfernen",()=>w(db=>db.doc("settings/app").set({...S.settings,pinHash:""}),"PIN entfernt"),true); break;
     case "pin": {
