@@ -1705,7 +1705,7 @@ function userMenu(){
   const u=curUser(); if (!u) return;
   modal(`<h3>${esc(u.name)}</h3><p class="muted" style="margin:0">Rolle: ${esc(ROLES[u.role]?.label||"")} – ${esc(ROLES[u.role]?.desc||"")}</p>
     <div class="actions" style="justify-content:flex-start"><button class="btn" id="umPw">Mein Passwort ändern</button><button class="btn primary" id="umOut">Abmelden</button></div>`, r=>{
-    r.querySelector("#umOut").onclick=()=>{ closeModal(); logoutUser("Gut Schlauch!"); };
+    r.querySelector("#umOut").onclick=()=>{ closeModal(); logoutUser("Abgemeldet."); };
     r.querySelector("#umPw").onclick=()=>userPwModal(u.id, true);
   });
 }
@@ -1924,7 +1924,7 @@ function aStart(){
   const it=todoItems();
   return `<div class="row between"><h3>Heute zu tun ${help("start")}</h3></div>
     ${it.length?`<ul class="list panel" style="padding:4px 16px">${it.map(x=>`<li><span class="pill ${x.level==="bad"?"bad":x.level==="warn"?"warn":"neutral"}">${x.level==="bad"?"Dringend":x.level==="warn"?"Bald":"Offen"}</span><span class="grow">${esc(x.text)}</span><span class="row">${x.btn}</span></li>`).join("")}</ul>`
-      :`<div class="empty"><b>Alles erledigt. Gut Schlauch!</b></div>`}`;
+      :`<div class="empty"><b>Alles erledigt.</b></div>`}`;
 }
 
 // ================= Mitglied-Detailseite =================
@@ -2141,7 +2141,7 @@ document.addEventListener("submit", async e => {
     if (!u || u.active===false){ UI.loginSel=null; render(); return; }
     if ((await userHash(id,pw))!==u.pw){ toast("Passwort falsch."); $("#ulPw").value=""; return; }
     UI.user=id; UI.loginSel=null; UI.lastAct=Date.now(); ss.set("kantine.user", id); LOG_MUTE++; try{ await w(db=>db.doc("users/"+id).update({lastLogin:Date.now()})); } finally { LOG_MUTE--; }
-    if (UI.view==="verwaltung" && !can("admin")) location.hash="#kiosk"; render(); toast(`Gut Schlauch, ${firstName(u.name)}!`); return;
+    if (UI.view==="verwaltung" && !can("admin")) location.hash="#kiosk"; render(); toast(`Hallo ${firstName(u.name)}!`); return;
   }
   if (e.target.id==="tokForm"){ const v=$("#tokExp").value; if (await w(db=>db.doc("settings/app").set({...S.settings, tokenExp:v}), "Gespeichert")) ls.set("kantine.tokenexp", null); return; }
   if (e.target.id==="setForm"){
@@ -2154,7 +2154,7 @@ document.addEventListener("submit", async e => {
 document.addEventListener("pointerdown", ()=>{ UI.lastAct=Date.now(); if (UI.unlocked) UI.unlockAt=Date.now(); }, {passive:true});
 
 // Benutzer nach 10 Minuten ohne Bedienung abmelden
-setInterval(()=>{ if (MODE==="staff" && usersOn() && curUser() && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML) logoutUser("Abgemeldet. Gut Schlauch!"); }, 15000);
+setInterval(()=>{ if (MODE==="staff" && usersOn() && curUser() && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML) logoutUser("Nach 10 Minuten ohne Bedienung abgemeldet."); }, 15000);
 // Alarm-Pause: nach 2 Minuten ohne Eingabe zurück zur Namensliste, Warenkorb bleibt gemerkt
 setInterval(()=>{ if (UI.view==="kiosk" && UI.sel && Date.now()-UI.lastAct > 120000 && !$("#modalRoot").innerHTML){ UI.sel=null; render(); } }, 15000);
 
