@@ -321,12 +321,12 @@ footer.legal a:hover{color:var(--red);text-decoration:underline}
 const COLS = ["members","products","bookings","payments","events","signups","shopping","ops","rounds","cash","stats","settlements","log","users","splits","counts","outs","invs"];
 const S = { codes:{}, role:null, email:"", live:false, settings:{}, loaded:new Set(), confirmed:new Set(), db:null, user:null, dl:null, assets:null, canWrite:null, canEdit:false, readOnly:false, offline:false, failed:false };
 COLS.forEach(c => S[c] = {});
-const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, meId:null, openEvent:null,
+const UI = { view:"kiosk", sel:null, multi:false, msel:[], carts:{}, search:"", unlocked:false, unlockAt:0, debtOnly:false, showPast:false, openEvent:null,
   adminTab:"start", statProd:"", statMeasure:"q", statMonth:null, year:new Date().getFullYear(), cashYear:new Date().getFullYear(), opYear:new Date().getFullYear(), lastAct:Date.now() };
 const CATS = ["Getränke","Heißgetränke","Essen","Snacks","Sonstiges"];
 const OPKINDS = ["Einsatz","Übung","Dienstabend","Sonstiges"];
 const CASHCATS = ["Kassendifferenz","Barverkauf","Einkauf Kantine","Verpflegung Übungsdienst","Einzahlung Mitglied","Pfandrückgabe","Veranstaltung","Spende","Sonstiges"];
-const VIEWS = ["kiosk","konto","termine","lager","statistik","verwaltung"];
+const VIEWS = ["kiosk","termine","lager","statistik","verwaltung"];
 const DAY = 864e5;
 
 let MODE="boot";
@@ -341,7 +341,6 @@ let LOGO_OK = false;
 const ZEP_SVG = (document.querySelector(".brand h1 svg")||{}).outerHTML || "";
 const logoTag = cls => LOGO_OK ? `<img class="${cls}" src="${esc(CFG.logo)}" alt="Logo ${esc(WEHR)}">` : "";
 const ls = { get(k){ try{return localStorage.getItem(k)}catch(e){return null} }, set(k,v){ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v) }catch(e){} } };
-UI.meId = ls.get("kantine.me");
 try{ UI.carts = JSON.parse(ls.get("kantine.carts")||"{}") || {}; }catch(e){ UI.carts={}; }
 for (const [k,c] of Object.entries(UI.carts)) if (!c || Date.now()-(c.ts||0) > DAY || !Object.keys(c.items||{}).length) delete UI.carts[k];
 const saveCarts = () => ls.set("kantine.carts", JSON.stringify(UI.carts));
@@ -514,15 +513,9 @@ function render(){
   whoBox();
   try{ document.documentElement.style.setProperty("--hdr", (document.querySelector("header.top")?.offsetHeight||150)+"px"); }catch(e){}
   if (usersOn() && !curUser() && S.loaded.size >= COLS.length+1){ main.innerHTML=loginView(); const f=$("#ulPw"); if (f) f.focus(); return; }
-  if (!usersOn() && S.settings.teamPinHash && UI.tlocked){
-    main.innerHTML=`<div class="stack" style="max-width:360px;margin:0 auto;text-align:center"><h2>Kantine gesperrt</h2><p class="muted" style="margin:0">Team-PIN oder Admin-PIN eingeben.</p>
-    <div class="pindots" id="tpinDots">${[0,1,2,3,4,5].map(()=>"<i></i>").join("")}</div>
-    <div class="pinpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="tpin" data-k="${n}">${n}</button>`).join("")}<button data-act="tpin" data-k="c" aria-label="Löschen">⌫</button><button data-act="tpin" data-k="0">0</button><button data-act="tpin" data-k="ok" style="background:var(--red);color:var(--red-ink);border-color:var(--red)">OK</button></div></div>`;
-    return;
-  }
   if (!S.db && S.failed) html = `<div class="empty"><b>Die Daten konnten nicht geladen werden.</b><span>Bitte Internetverbindung prüfen und die Seite neu laden.</span></div>`;
   else if (S.loaded.size < COLS.length+1) html = `<div class="empty"><b>Kantine wird geladen …</b><span>${S.offline?"Die Daten sind gerade nicht erreichbar. Die Ansicht aktualisiert sich, sobald die Verbindung steht.":"Mitglieder, Artikel und Buchungen kommen gleich."}</span></div>`;
-  else html = (UI.view!=="verwaltung"?tokenNote(14):"") + ({kiosk:vKiosk, konto:vKonto, termine:vTermine, lager:vLager, statistik:vStats, verwaltung:vAdmin}[UI.view] || vKiosk)();
+  else html = staleNote() + (UI.view!=="verwaltung"?tokenNote(14):"") + ({kiosk:vKiosk, termine:vTermine, lager:vLager, statistik:vStats, verwaltung:vAdmin}[UI.view] || vKiosk)();
   main.innerHTML = html;
   for (const [id,v] of Object.entries(keep)){ const el=document.getElementById(id); if (el && main.contains(el) && !el.dataset.fresh){ if (el.type==="checkbox") el.checked=v; else el.value=v; } }
   if (act){ const el=document.getElementById(act); if (el){ el.focus(); try{ if(sel && sel[0]!=null) el.setSelectionRange(sel[0],sel[1]); }catch(e){} } }
@@ -599,39 +592,13 @@ function vKioskProducts(t, ps){
   </div>`;
 }
 
-// ---------- Mein Konto ----------
-function vKonto(){
-  const ms = membersActive();
-  const me = UI.meId && S.members[UI.meId] ? UI.meId : null;
-  const picker = `<label class="f" style="max-width:360px">Wer bist du?<select id="meSel"><option value="">Bitte Namen wählen</option>${ms.map(m=>`<option value="${m.id}" ${m.id===me?"selected":""}>${esc(m.name)}</option>`).join("")}</select><span class="hint">Wird nur auf diesem Gerät gemerkt.</span></label>`;
-  if (!ms.length) return `<div class="stack"><h2>Mein Konto</h2><div class="empty"><b>Noch keine Mitglieder angelegt.</b><span>Sobald der Kassenwart die Mitgliederliste angelegt hat, wählst du hier deinen Namen.</span></div></div>`;
-  if (!me) return `<div class="stack"><h2>Mein Konto</h2>${picker}<div class="empty"><b>Wähle deinen Namen</b><span>Dann siehst du Kontostand, deine letzten Striche und Einzahlungen und kannst dich zu Terminen anmelden.</span></div></div>`;
-  const bal = balance(me), m=S.members[me];
-  const tx = [
-    ...list("bookings").filter(b=>b.m===me).map(b=>({ts:b.ts, txt:`${b.qty}× ${b.n}${b.r?` <span class="pill warn">Runde${S.rounds[b.r]?.reason?` · ${esc(S.rounds[b.r].reason)}`:""}</span>`:""}`, amt:-(b.price*b.qty)})),
-    ...list("payments").filter(p=>p.m===me).map(p=>({ts:p.ts, txt:esc(p.note||"Einzahlung"), amt:p.amount}))
-  ].sort((a,b)=>b.ts-a.ts);
-  const ms0 = new Date(); ms0.setDate(1); ms0.setHours(0,0,0,0);
-  const monthSpend = list("bookings").filter(b=>b.m===me && b.ts>=ms0.getTime()).reduce((s,b)=>s+b.price*b.qty,0);
-  const up = list("events").filter(e=>e.date>=today()).sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||""))).slice(0,3);
-  return `<div class="stack"><h2>Mein Konto</h2>${picker}
-    <div class="panel row between" style="align-items:flex-end">
-      <div><div class="eyebrow">Kontostand ${esc(m.name)}</div><div class="bigbal num ${bal<0?"neg":"pos"}">${eur(bal)}</div>
-      <div class="muted">${bal<0?"Wird mit deiner nächsten Aufwandsentschädigung verrechnet.":bal>0?"Guthaben – wird mit dem nächsten Verzehr verrechnet.":"Alles verrechnet."}</div></div>
-      <div class="kpi" style="min-width:170px"><span class="eyebrow">Diesen Monat</span><b class="num">${eur(monthSpend)}</b></div></div>
-    ${up.length?`<div class="section"><h3>Nächste Termine</h3>${up.map(e=>evCard(e,true)).join("")}</div>`:""}
-    <div class="panel section"><h3>Buchungen</h3>
-      ${tx.length?`<ul class="list">${tx.slice(0,60).map(t=>`<li><span class="grow">${t.txt}<br><span class="muted small">${tsStr(t.ts)}</span></span><b class="num ${t.amt<0?"":"pos"}">${eurS(t.amt)}</b></li>`).join("")}</ul>`:`<p class="muted" style="margin:0">Seit dem letzten Abschluss noch keine Buchungen.</p>`}
-      ${m.carry?`<p class="muted" style="margin:0">Übertrag aus früheren Abschlüssen: <b class="num">${eurS(m.carry)}</b></p>`:""}</div></div>`;
-}
-
 // ---------- Termine ----------
 function evCard(e, compact){
   const d = new Date(e.date+"T12:00:00");
   const sus = list("signups").filter(s=>s.e===e.id && S.members[s.m]).sort((a,b)=>mName(a.m).localeCompare(mName(b.m),"de"));
   const persons = sus.reduce((s,x)=>s+(x.count||1),0);
   const past = e.date < today(); const closed = e.deadline && e.deadline < today();
-  const mine = UI.meId && sus.find(s=>s.m===UI.meId); const open = UI.openEvent===e.id;
+  const mine = null; const open = UI.openEvent===e.id;
   return `<article class="ev ${past?"past":""}">
     <div class="date"><div class="w">${d.toLocaleDateString("de-DE",{weekday:"short"})}</div><div class="d">${d.getDate()}</div><div class="m">${d.toLocaleDateString("de-DE",{month:"short"})}</div></div>
     <div class="body">
@@ -948,9 +915,8 @@ function aClose(){
       ${S.settings.lastBackup?`<p class="muted small" style="margin:0">Letzte Sicherung: ${tsStr(S.settings.lastBackup)}</p>`:`<p class="muted small" style="margin:0">Noch keine Sicherung heruntergeladen.</p>`}</div></section>
     ${can("system")?`<section class="section"><h3>Einstellungen</h3>
       <form class="panel grid2" id="setForm"><label class="f">Name der Wehr<input type="text" id="setUnit" value="${esc(S.settings.unit||"")}" placeholder="z. B. FF Musterdorf"></label>
-      ${usersOn()?"":`<label class="f">Admin-PIN<input type="password" id="setPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.pinHash?"Gesetzt – neue eingeben zum Ändern":"4 bis 6 Ziffern"}"><span class="hint">Sperrt die Verwaltung am gemeinsamen Tablet.</span></label>
-      <label class="f">Team-PIN<input type="password" id="setTPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.teamPinHash?"Gesetzt – neue eingeben zum Ändern":"optional, 4 bis 6 Ziffern"}"><span class="hint">Für Kantinenteam und HBM. Sperrt die App nach 10 Minuten ohne Bedienung.</span></label>`}
-      <div class="row" style="align-self:end"><button class="btn primary" type="submit">Speichern</button>${S.settings.pinHash&&!usersOn()?`<button class="btn" type="button" data-act="pinrm">Admin-PIN entfernen</button>`:""}${S.settings.teamPinHash&&!usersOn()?`<button class="btn" type="button" data-act="tpinrm">Team-PIN entfernen</button>`:""}</div></form></section>
+      ${usersOn()?"":`<label class="f">Admin-PIN<input type="password" id="setPin" inputmode="numeric" maxlength="6" placeholder="${S.settings.pinHash?"Gesetzt – neue eingeben zum Ändern":"4 bis 6 Ziffern"}"><span class="hint">Sperrt die Verwaltung am gemeinsamen Tablet.</span></label>`}
+      <div class="row" style="align-self:end"><button class="btn primary" type="submit">Speichern</button>${S.settings.pinHash&&!usersOn()?`<button class="btn" type="button" data-act="pinrm">Admin-PIN entfernen</button>`:""}</div></form></section>
     <section class="section"><h3>Geräte &amp; Sicherheit</h3>
       <div class="panel stack"><div class="row between"><span>Dieses Gerät: <b>${esc(S.email||"")}</b></span><span class="muted small">${esc(syncLabel())}</span></div>
       <form class="row" id="tokForm"><label class="f" style="width:200px">Zugangsschlüssel gültig bis<input type="date" id="tokExp" value="${esc(tokenExpiry())}"></label><button class="btn" type="submit" style="align-self:flex-end">Speichern</button><span class="hint" style="align-self:flex-end">Steht bei GitHub beim Schlüssel. 30 Tage vorher erscheint ein Hinweis.</span></form>
@@ -959,7 +925,7 @@ function aClose(){
 }
 
 // ================= Actions =================
-let pinBuf="", tpinBuf="";
+let pinBuf="";
 async function bookCart(paid){
   const t=target(UI.sel); if(!t) return;
   const cart=cartOf(t.key);
@@ -1033,7 +999,7 @@ function opForm(id){
 function roundForm(){
   const ms=membersActive();
   modal(`<h3>Runde ausgeben</h3><p class="muted" style="margin:0">Alle bedienen sich, am Ende geht alles auf eine Person.</p>
-    <label class="f">Wer gibt aus?<select id="rPayer"><option value="">Bitte wählen</option>${ms.map(m=>`<option value="${m.id}" ${m.id===UI.meId?"selected":""}>${esc(m.name)}</option>`).join("")}</select></label>
+    <label class="f">Wer gibt aus?<select id="rPayer"><option value="">Bitte wählen</option>${ms.map(m=>`<option value="${m.id}" >${esc(m.name)}</option>`).join("")}</select></label>
     <label class="f">Anlass<input type="text" id="rReason" maxlength="60" placeholder="z. B. Geburtstag, Beförderung zum Oberfeuerwehrmann"></label>
     <div class="actions"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="rSave">Runde starten</button></div>`, r=>{
     r.querySelector("#rSave").onclick = async ()=>{
@@ -1198,7 +1164,7 @@ function eventForm(id){
 }
 function signupForm(eid){
   const e=S.events[eid]; const ms=membersActive();
-  const pre = UI.meId && S.members[UI.meId] ? UI.meId : "";
+  const pre = "";
   const cur = pre ? S.signups[eid+"_"+pre] : null;
   modal(`<h3>${esc(e.title)}</h3><p class="muted" style="margin:0">${new Date(e.date+"T12:00:00").toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"})}${e.time?`, ${esc(e.time)} Uhr`:""}${e.price?` · ${eur(e.price)} pro Person`:""}</p>
     <label class="f">Name<select id="suM"><option value="">Bitte wählen</option>${ms.map(m=>`<option value="${m.id}" ${m.id===pre?"selected":""}>${esc(m.name)}</option>`).join("")}</select></label>
@@ -1210,7 +1176,6 @@ function signupForm(eid){
     r.querySelector("#suSave").onclick = async ()=>{
       const m=sel.value; if(!m){ toast("Bitte deinen Namen wählen."); return; }
       const n=Math.min(10,Math.max(1,parseInt(r.querySelector("#suN").value)||1));
-      if (!UI.meId){ UI.meId=m; ls.set("kantine.me",m); }
       if (await w(db=>db.doc("signups/"+eid+"_"+m).set({e:eid,m,count:n,note:r.querySelector("#suNote").value.trim(),ts:Date.now()}),`${mName(m)} ist angemeldet`)) closeModal();
     };
     r.querySelector("#suDel").onclick = async ()=>{ const m=sel.value; if (await w(db=>db.doc("signups/"+eid+"_"+m).delete(),`${mName(m)} abgemeldet`)) closeModal(); };
@@ -1475,15 +1440,11 @@ function aLog(){
 function quarterOf(d){ d=d||new Date(); const q=Math.floor(d.getMonth()/3); return {q:q+1, y:d.getFullYear(), start:new Date(d.getFullYear(), q*3, 1), end:new Date(d.getFullYear(), q*3+3, 0), label:`${q+1}. Quartal ${d.getFullYear()}`}; }
 const isoD = d => isoLocal(d.getTime()+12*3600e3);
 function daysUntil(iso){ return Math.round((new Date(iso+"T12:00:00") - new Date(today()+"T12:00:00"))/DAY); }
-function quarterNote(){
-  const Q=quarterOf(); const left=daysUntil(isoD(Q.end));
-  const btns=`<span class="row" style="margin-top:6px"><button class="btn small" data-act="atab" data-tab="ae">Zur Abzugsliste</button><button class="btn small" data-act="backup">Sicherung herunterladen</button></span>`;
-  if (left<=7) return `<div class="note">${left===0?`Das ${Q.label} endet heute`:`Das ${Q.label} endet in ${left} ${left===1?"Tag":"Tagen"} (am ${dDate(isoD(Q.end))})`} – Abzugsliste erstellen und Sicherung herunterladen.${btns}</div>`;
-  const P=quarterOf(new Date(Q.start.getTime()-DAY)); const since=daysUntil(isoD(Q.start))*-1;
-  const done=list("settlements").some(s=>s.date && s.date>=isoD(new Date(P.end.getTime()-21*DAY)));
-  const open=membersActive().some(m=>balance(m.id)<0);
-  if (since<=21 && !done && open) return `<div class="note">Für das ${P.label} wurde noch keine Abzugsliste gebucht.${btns}</div>`;
-  return "";
+const STALE_MS = 24*3600*1000;
+function staleNote(){
+  if (!PENDING.length) return ""; const first=Math.min(...PENDING.map(o=>o.ts||Date.now()));
+  if (Date.now()-first < STALE_MS) return "";
+  return `<div class="note" style="background:var(--bad-soft);color:var(--bad)"><b>${PENDING.length} ${PENDING.length===1?"Änderung":"Änderungen"} seit ${tsStr(first)} nicht abgeglichen.</b> Auf den anderen Geräten fehlen sie noch. Bitte Internet bzw. WLAN prüfen${syncErr?` (${esc(syncErr)})`:""}. <button class="btn small" data-act="syncnow" style="margin-left:6px">Jetzt abgleichen</button></div>`;
 }
 function tokenExpiry(){ return ls.get("kantine.tokenexp") || S.settings.tokenExp || ""; }
 function tokenNote(maxDays){
@@ -1956,7 +1917,7 @@ function todoItems(){
   if (can("master")){ const noMl=list("products").filter(p=>p.cat==="Getränke" && !p.ml); if (noMl.length) add("info", `Füllmenge fehlt bei ${noMl.map(p=>p.name).join(", ")} (für die Liter im Jahresrückblick).`, b("atab","Zu den Stammdaten",'data-tab="stamm"')); }
   const mh=productsActive().filter(p=>mhdState(p)==="exp"||mhdState(p)==="soon"); if (mh.length) add("warn", `MHD prüfen: ${mh.map(p=>p.name).join(", ")}.`, `<a class="btn small" href="#lager">Zum Lager</a>`);
   if (can("system")){ const exp=tokenExpiry(); if (exp && daysUntil(exp)<=30) add("bad", `GitHub-Zugangsschlüssel läuft ${daysUntil(exp)<0?"ist abgelaufen":`in ${daysUntil(exp)} Tagen ab`}.`, b("atab","Einstellungen",'data-tab="abschluss"')); }
-  if (syncErr && PENDING.length) add("bad", `${PENDING.length} Änderungen sind noch nicht abgeglichen (${syncErr}).`, b("syncnow","Jetzt abgleichen"));
+  if (PENDING.length && (syncErr || Date.now()-Math.min(...PENDING.map(o=>o.ts||Date.now()))>STALE_MS)) add("bad", `${PENDING.length} ${PENDING.length===1?"Änderung ist":"Änderungen sind"} noch nicht abgeglichen${syncErr?` (${syncErr})`:""} – auf den anderen Geräten fehlen sie.`, b("syncnow","Jetzt abgleichen"));
   return it;
 }
 function aStart(){
@@ -2083,7 +2044,7 @@ document.addEventListener("click", async ev => {
     case "inventur": stockForm("inv"); break;
     case "ausbuchen": outForm(); break;
     case "leergut": leergutForm(); break;
-    case "shopdone": { const it=S.shopping[id]; if(it) w(db=>db.doc("shopping/"+id).update({done:!it.done, by: !it.done && UI.meId ? mName(UI.meId) : ""})); break; }
+    case "shopdone": { const it=S.shopping[id]; if(it) w(db=>db.doc("shopping/"+id).update({done:!it.done, by: !it.done ? who() : ""})); break; }
     case "shopdel": w(db=>db.doc("shopping/"+id).delete()); break;
     case "shopclear": w(async db=>{ for (const i of list("shopping").filter(i=>i.done)) await db.doc("shopping/"+i.id).delete(); }, "Erledigte entfernt"); break;
     case "shopshare": copyText(shoppingText(), "Einkaufsliste kopieren"); break;
@@ -2120,16 +2081,6 @@ document.addEventListener("click", async ev => {
     case "logout": logoutDevice(); break;
     case "pwchange": pwModal(); break;
     case "syncnow": syncNow(); break;
-    case "tpinrm": confirmBox("Team-PIN entfernen","Dann ist die Kantine auf verbundenen Geräten ohne PIN bedienbar.","Team-PIN entfernen",()=>w(db=>db.doc("settings/app").set({...S.settings,teamPinHash:""}),"Team-PIN entfernt"),true); break;
-    case "tpin": {
-      const k=t.dataset.k;
-      if (k==="c") tpinBuf=tpinBuf.slice(0,-1);
-      else if (k==="ok"){ const h=await sha(tpinBuf); tpinBuf="";
-        if (h===S.settings.teamPinHash || h===S.settings.pinHash){ UI.tlocked=false; UI.lastAct=Date.now(); if (h===S.settings.pinHash){ UI.unlocked=true; UI.unlockAt=Date.now(); } render(); return; }
-        toast("PIN falsch."); }
-      else if (tpinBuf.length<6) tpinBuf+=k;
-      document.querySelectorAll("#tpinDots i").forEach((d,i)=>d.classList.toggle("f", i<tpinBuf.length));
-      break; }
     case "aeprep": aePrep(); break;
     case "aeshow": aeShow(id); break;
     case "cashnew": cashForm(); break;
@@ -2170,7 +2121,6 @@ document.addEventListener("keydown", e => { if ((e.key==="Enter"||e.key===" ") &
 document.addEventListener("input", e => { if (e.target.id==="kSearch"){ UI.search=e.target.value; render(); } });
 document.addEventListener("change", e => {
   const id=e.target.id;
-  if (id==="meSel"){ UI.meId=e.target.value||null; ls.set("kantine.me",UI.meId); render(); }
   if (id==="debtOnly"){ UI.debtOnly=e.target.checked; render(); }
   if (id==="statProd"){ UI.statProd=e.target.value; render(); }
   if (id==="yearSel"){ UI.year=+e.target.value; render(); }
@@ -2195,11 +2145,9 @@ document.addEventListener("submit", async e => {
   }
   if (e.target.id==="tokForm"){ const v=$("#tokExp").value; if (await w(db=>db.doc("settings/app").set({...S.settings, tokenExp:v}), "Gespeichert")) ls.set("kantine.tokenexp", null); return; }
   if (e.target.id==="setForm"){
-    const unit=$("#setUnit").value.trim().slice(0,60), pin=($("#setPin")?.value||"").trim(), tpin=($("#setTPin")?.value||"").trim();
-    if ((pin && !/^\d{4,6}$/.test(pin)) || (tpin && !/^\d{4,6}$/.test(tpin))){ toast("Eine PIN braucht 4 bis 6 Ziffern."); return; }
-    if (tpin && pin && tpin===pin){ toast("Team-PIN und Admin-PIN müssen verschieden sein."); return; }
-    const data={...S.settings, unit}; if (pin) data.pinHash=await sha(pin); if (tpin) data.teamPinHash=await sha(tpin);
-    if ($("#setTPin")) $("#setTPin").value="";
+    const unit=$("#setUnit").value.trim().slice(0,60), pin=($("#setPin")?.value||"").trim();
+    if (pin && !/^\d{4,6}$/.test(pin)){ toast("Die PIN braucht 4 bis 6 Ziffern."); return; }
+    const data={...S.settings, unit}; if (pin) data.pinHash=await sha(pin);
     if (await w(db=>db.doc("settings/app").set(data), pin?"Gespeichert – PIN ist aktiv":"Gespeichert")){ if ($("#setPin")) $("#setPin").value=""; if(pin){ UI.unlocked=true; UI.unlockAt=Date.now(); } }
   }
 });
@@ -2207,8 +2155,6 @@ document.addEventListener("pointerdown", ()=>{ UI.lastAct=Date.now(); if (UI.unl
 
 // Benutzer nach 10 Minuten ohne Bedienung abmelden
 setInterval(()=>{ if (MODE==="staff" && usersOn() && curUser() && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML) logoutUser("Abgemeldet. Gut Schlauch!"); }, 15000);
-// Sperre nach 10 Minuten ohne Bedienung (wenn Team-PIN gesetzt)
-setInterval(()=>{ if (MODE==="staff" && S.settings.teamPinHash && !UI.tlocked && Date.now()-UI.lastAct > 600000 && !$("#modalRoot").innerHTML){ UI.tlocked=true; UI.unlocked=false; render(); } }, 15000);
 // Alarm-Pause: nach 2 Minuten ohne Eingabe zurück zur Namensliste, Warenkorb bleibt gemerkt
 setInterval(()=>{ if (UI.view==="kiosk" && UI.sel && Date.now()-UI.lastAct > 120000 && !$("#modalRoot").innerHTML){ UI.sel=null; render(); } }, 15000);
 
@@ -2525,8 +2471,7 @@ async function remember(raw, keep, devname){
 function startStaff(){
   S.email = ls.get("kantine.devname") || "Gerät";
   S.role="team"; S.canEdit=true; S.canWrite=true; S.db=DB; S.assets=assetsAdapter; UI.user=ss.get("kantine.user")||null;
-  UI.tlocked = !!(S.settings && S.settings.teamPinHash);
-  rebuild(); UI.tlocked = !!S.settings.teamPinHash;
+  rebuild();
   MODE="staff"; setChrome(true); updSync(); route(); syncNow();
 }
 function pwModal(){
