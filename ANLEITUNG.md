@@ -136,6 +136,9 @@ Statt gemeinsamer PINs meldet sich jede Person mit **Namen und eigenem Passwort*
 
 Die Benutzer-Passwörter regeln, wer in der App was darf. Den Zugang zu den Daten selbst schützen weiterhin Zugangsschlüssel und Kantinen-Passwort (pro Gerät einmal).
 
+
+**Spickzettel fürs Kantinenteam:** `Spickzettel-Kantinenteam.pdf` im Repository (A4 zum Aufhängen neben dem Tablet). Online: https://ff-staaken.github.io/kantine/spickzettel.html
+
 ---
 
 ## Gerät verloren oder Person scheidet aus
