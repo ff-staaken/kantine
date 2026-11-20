@@ -1,6 +1,6 @@
 # Kantine
 
-Kantinen-App für die Freiwillige Feuerwehr: Strichliste, Abzugsliste für die Verrechnung mit der
+Kantinen-App für die Freiwillige Feuerwehr: Anschreiben über die Mitgliederliste, Abzugsliste für die Verrechnung mit der
 Aufwandsentschädigung, Einsatzverpflegung, Runden, Lager mit Pfand und MHD, Kassenbuch mit Belegen,
 Termine und Statistik. Admin- und Team-PIN; Kameraden sehen ihr eigenes Konto über einen persönlichen QR-Code.
 

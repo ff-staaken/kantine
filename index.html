@@ -537,7 +537,7 @@ function azBar(ms){ const have=new Set(ms.map(m=>azOf(m.name))); const L=[..."AB
 function vKiosk(){
   const ms = membersActive(); const ps = productsActive();
   if (!ms.length || !ps.length){
-    return `<div class="stack"><h2>Strichliste</h2>
+    return `<div class="stack"><h2>Mitglieder</h2>
       <div class="empty"><b>${!ms.length?"Noch keine Mitglieder angelegt.":"Noch keine Artikel angelegt."}</b>
       <span>Der Kassenwart legt unter <i>Verwaltung → Stammdaten</i> zuerst Mitglieder und das Sortiment mit Preisen an. Danach bucht der Kassenwart bei der Ausgabe mit zwei Fingertipps an.</span>
       ${S.canEdit?`<button class="btn primary" data-act="goadmin" data-tab="stamm">Zu den Stammdaten</button>`:""}</div></div>`;
@@ -763,7 +763,7 @@ function vStats(){
       <div class="fact"><b class="num">${yOps.filter(o=>o.kind==="Einsatz").length} / ${yOps.filter(o=>o.kind!=="Einsatz").length}</b><span>Einsätze / Übungen &amp; Dienste verpflegt</span></div>
       <div class="fact"><b class="num">${yRounds}</b><span>Runden ausgegeben</span></div>
       <div class="fact"><b class="num">${yEv.length}</b><span>Termine mit ${yPers} Anmeldungen</span></div>
-      <div class="fact"><b class="num">${nf.format(yQ)}</b><span>Artikel über die Strichliste</span></div>
+      <div class="fact"><b class="num">${nf.format(yQ)}</b><span>Artikel gebucht</span></div>
       <div class="fact"><b class="num">${eur(yRev).replace(/,\d\d/,"")}</b><span>Umsatz Kantine</span></div>
     </div>
     ${yArr.length?`<div class="panel section"><h3>Beliebteste Artikel ${Y}</h3><ul class="list">${yArr.slice(0,5).map(x=>`<li><span class="grow"><b>${esc(x.n)}</b></span><span class="num">${nf.format(x.q)} Stück</span></li>`).join("")}</ul>
@@ -821,7 +821,7 @@ function aOps(){
       ${Object.keys(items).length?`<div class="chips">${Object.entries(items).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`<span class="chip">${q}× ${esc(n)}</span>`).join("")}</div>`:`<p class="muted" style="margin:0">Noch nichts gebucht.</p>`}
       <div class="row">${o.open?`<button class="btn small" data-act="opend" data-id="${o.id}">Verpflegung beenden</button>`:`<button class="btn small ghost" data-act="opreopen" data-id="${o.id}">Wieder öffnen</button>`}
         <button class="btn small ghost" data-act="opedit" data-id="${o.id}">Bearbeiten</button></div></div>`).join("")
-    :`<div class="empty"><b>Keine Einsatzverpflegung in ${Y}.</b><span>Einsätze und Übungen startest du an der Strichliste.</span></div>`}`;
+    :`<div class="empty"><b>Keine Einsatzverpflegung in ${Y}.</b><span>Einsätze und Übungen startest du im Reiter Mitglieder.</span></div>`}`;
 }
 // ---------- Aufwandsentschädigung (Abzugsliste für die Kassiererin) ----------
 function aeDefaultLabel(){ const d=new Date(); return `${Math.floor(d.getMonth()/3)+1}. Quartal ${d.getFullYear()}`; }
@@ -1062,7 +1062,7 @@ function memberForm(id){
   }
   const bal = balance(id);
   modal(`<h3>${esc(m.name)}</h3><label class="f">Name<input type="text" id="mName" value="${esc(m.name)}" maxlength="60"></label>
-    <label class="row" style="font-weight:600"><input type="checkbox" id="mActive" ${m.active!==false?"checked":""}> In der Strichliste anzeigen</label>
+    <label class="row" style="font-weight:600"><input type="checkbox" id="mActive" ${m.active!==false?"checked":""}> In der Mitgliederliste anzeigen</label>
     <p class="muted" style="margin:0">Kontostand: <b class="num">${eur(bal)}</b>. Ausgeblendete Mitglieder behalten ihr Konto.</p>
     <div class="actions">${bal===0?`<button class="btn danger" id="mDel" style="margin-right:auto">Löschen</button>`:""}<button class="btn" data-close>Abbrechen</button><button class="btn primary" id="mSave">Speichern</button></div>`, r=>{
     r.querySelector("#mSave").onclick = async ()=>{
@@ -1364,7 +1364,7 @@ function describeOp(op, before){
     case "members":
       if (op.t==="del") return `Mitglied gelöscht: ${before?before.name:op.id}`;
       if (op.t==="set" && !before) return `Mitglied angelegt: ${d.name}`;
-      return diffText(`Mitglied ${before?before.name:""}`, before, d, {name:"Name", active:"in der Strichliste"});
+      return diffText(`Mitglied ${before?before.name:""}`, before, d, {name:"Name", active:"in der Mitgliederliste"});
     case "products":
       if (op.t==="del") return `Artikel gelöscht: ${before?before.name:op.id}`;
       if (op.t==="set" && !before) return `Artikel angelegt: ${d.name} (${eur(d.price)})`;
@@ -1598,7 +1598,7 @@ async function yearReportPdf(Y){
   // 2 Umsatz
   const agg=monthAgg(); const items={}; let rev=0, qty=0;
   for (const [ym,o] of Object.entries(agg)) if (+ym.slice(0,4)===Y) for (const [pid,v] of Object.entries(o)){ const e=(items[pid]=items[pid]||{n:S.products[pid]?.name||v.n,q:0,c:0}); e.q+=v.q; e.c+=v.c; rev+=v.c; qty+=v.q; }
-  k.h2("2. Verkauf über die Strichliste");
+  k.h2("2. Verkauf");
   k.p(`Umsatz ${eur(rev)} mit ${nf.format(qty)} Artikeln (angeschrieben, Einsatzverpflegung, Runden und Barverkauf).`);
   const top=Object.values(items).sort((a,b)=>b.c-a.c);
   if (top.length) k.table([{h:"Artikel",w:110},{h:"Stück",w:30,align:"r"},{h:"Umsatz",w:35,align:"r"}], top.slice(0,15).map(x=>[x.n, nf.format(x.q), eur(x.c)]));
@@ -1848,10 +1848,10 @@ function kassensturzList(){
 
 // ================= Hilfe auf Abruf =================
 const HELP = {
-  kiosk: ["Strichliste", "Namen antippen, Artikel antippen, buchen. „Mehrere buchen“ gibt mehreren Kameraden dasselbe. Über die Kacheln oben bucht ihr Barverkauf an Gäste, Einsätze und Übungen (auf FF/JF Kasse) oder eine Runde. „Essen aufteilen“ verteilt einen Gesamtbetrag auf die Teilnehmer. Stornieren geht bis 15 Minuten nach der Buchung."],
+  kiosk: ["Mitglieder", "Namen antippen, Artikel antippen, buchen. „Mehrere buchen“ gibt mehreren Kameraden dasselbe. Über die Kacheln oben bucht ihr Barverkauf an Gäste, Einsätze und Übungen (auf FF/JF Kasse) oder eine Runde. „Essen aufteilen“ verteilt einen Gesamtbetrag auf die Teilnehmer. Stornieren geht bis 15 Minuten nach der Buchung."],
   termine: ["Termine", "Grillabend, Übungsessen, Kameradschaftsabend. Anmelden kann das Kantinenteam für jeden Kameraden. Nach dem Termin: feste Preise mit „Kosten auf Konten buchen“, eingekauftes oder bestelltes Essen mit „Kosten aufteilen“ – dann zahlt jeder angemeldete Kamerad seinen Anteil, mit Begleitung entsprechend mehr."],
   lager: ["Lager", "Jede Buchung zieht automatisch vom Bestand ab. Nach dem Einkauf „Einkauf einbuchen“, zum Nachzählen „Inventur“. Was ohne Bezahlung rausgeht – Getränke für den Dienstabend, Bruch, Abgelaufenes – über „Ausbuchen“. Fällt etwas unter den Mindestbestand, steht es auf der Einkaufsliste, mit einer Menge passend zum Verbrauch der letzten Wochen."],
-  ausbuchen: ["Ausbuchen", "Für alles, was rausgeht, ohne dass jemand zahlt: Getränke für den Dienstabend, ein Kasten mit Bruch, Abgelaufenes. Grund wählen, Menge eintragen, ausbuchen. Der Bestand stimmt dann wieder, niemand wird belastet, und im Protokoll steht, wer es war. Soll doch jemand zahlen, bucht ihr ganz normal an der Strichliste."],
+  ausbuchen: ["Ausbuchen", "Für alles, was rausgeht, ohne dass jemand zahlt: Getränke für den Dienstabend, ein Kasten mit Bruch, Abgelaufenes. Grund wählen, Menge eintragen, ausbuchen. Der Bestand stimmt dann wieder, niemand wird belastet, und im Protokoll steht, wer es war. Soll doch jemand zahlen, bucht ihr ganz normal über den Reiter Mitglieder."],
   einkauf: ["Einkauf einbuchen", "Nach dem Einkauf eintragen, was neu ins Lager kommt – Kästen oder einzelne Flaschen. Das Haltbarkeitsdatum kannst du gleich mit anpassen. Kam das Geld aus der Kantinenkasse, trägt der Kantinenchef unten den Betrag vom Kassenbon ein und fotografiert den Bon – dann steht der Einkauf auch im Kassenbuch."],
   inventur: ["Inventur", "Einmal durchzählen und eintragen, was wirklich da ist. Die App nimmt die Zahl als neuen Bestand. Felder, die du leer lässt, bleiben, wie sie sind. Weicht es stark ab, lohnt ein Blick ins Protokoll."],
   leergut: ["Leergut", "Wenn Leergut zum Getränkemarkt ging: Die App schlägt vor, wie viel eigentlich da sein müsste. Trag ein, was tatsächlich zurückging. Mit dem Häkchen landet das Pfandgeld als Einnahme im Kassenbuch."],
@@ -1997,7 +1997,7 @@ document.addEventListener("click", async ev => {
     case "opnew": opForm(); break;
     case "opedit": opForm(id); break;
     case "opend": { const tt=opTotals(id).total; const o=S.ops[id]; confirmBox("Verpflegung beenden", `${esc(o.kind)} „${esc(o.title)}“ mit <b>${eur(tt)}</b> abschließen?${opAcct(o)?` Gebucht ist alles auf ${esc(mName(opAcct(o)))}.`:""}`, "Beenden", async()=>{ if (await w(db=>db.doc("ops/"+id).update({open:false}),"Verpflegung beendet")){ if (UI.sel==="o:"+id){ setCart(UI.sel,{}); UI.sel=null; } render(); } }); break; }
-    case "opreopen": w(db=>db.doc("ops/"+id).update({open:true}),"Wieder geöffnet – jetzt an der Strichliste buchbar"); break;
+    case "opreopen": w(db=>db.doc("ops/"+id).update({open:true}),"Wieder geöffnet – jetzt im Reiter Mitglieder buchbar"); break;
     case "opcsv": { const Y=+t.dataset.y; const rows=[];
       for (const o of list("ops").filter(o=>o.date&&+o.date.slice(0,4)===Y).sort((a,b)=>a.date.localeCompare(b.date))){
         const its={}; for (const b of Object.values(S.bookings)) if (b.o===o.id){ const e=(its[b.n]=its[b.n]||{q:0,c:0}); e.q+=b.qty||1; e.c+=(b.price||0)*(b.qty||1); }
